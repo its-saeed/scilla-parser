@@ -1,7 +1,7 @@
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
-use scilla2rust::{parse, Contract, Field, FieldList, Transition};
+use scilla_parser::{parse, Contract, Field, FieldList, Transition};
 
 #[test]
 fn test_chain_id_contract_parse() {
