@@ -1,15 +1,12 @@
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
-use scilla2rust::{
-    run_scilla_fmt, {parse_sexp, Contract, Field, FieldList, Transition},
-};
+use scilla2rust::{parse, Contract, Field, FieldList, Transition};
 
 #[test]
 fn test_chain_id_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/chainid.scilla");
-    let sexp = run_scilla_fmt(&contract_path).unwrap();
-    let contract = parse_sexp(&sexp, &contract_path).unwrap();
+    let contract = parse(&contract_path).unwrap();
 
     assert_eq!(
         contract,
@@ -31,8 +28,7 @@ fn test_chain_id_contract_parse() {
 #[test]
 fn test_hello_world_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/HelloWorld.scilla");
-    let sexp = run_scilla_fmt(&contract_path).unwrap();
-    let contract = parse_sexp(&sexp, &contract_path).unwrap();
+    let contract = parse(&contract_path).unwrap();
 
     assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(
@@ -53,8 +49,7 @@ fn test_hello_world_contract_parse() {
 #[test]
 fn test_send_zil_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/SendZil.scilla");
-    let sexp = run_scilla_fmt(&contract_path).unwrap();
-    let contract = parse_sexp(&sexp, &contract_path).unwrap();
+    let contract = parse(&contract_path).unwrap();
 
     assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(
@@ -108,8 +103,7 @@ fn test_send_zil_contract_parse() {
 #[test]
 fn test_timestamp_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/Timestamp.scilla");
-    let sexp = run_scilla_fmt(&contract_path).unwrap();
-    let contract = parse_sexp(&sexp, &contract_path).unwrap();
+    let contract = parse(&contract_path).unwrap();
 
     assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(

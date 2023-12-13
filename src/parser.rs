@@ -2,10 +2,10 @@ use std::path::Path;
 
 use lexpr::Value;
 
-use crate::{Contract, Error, Field, FieldList, Transition};
+use crate::{run_scilla_fmt, Contract, Error, Field, FieldList, Transition};
 
 pub fn parse(contract_path: &Path) -> Result<Contract, Error> {
-    let sexp = std::fs::read_to_string(contract_path)?;
+    let sexp = run_scilla_fmt(&contract_path).unwrap();
     parse_sexp(&sexp, contract_path)
 }
 
