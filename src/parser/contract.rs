@@ -4,25 +4,26 @@ use convert_case::Casing;
 
 use super::{FieldList, Transition};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Contract {
     pub path: PathBuf,
     pub name: String,
-    pub contract_params: FieldList,
-    pub contract_fields: FieldList,
+    pub constructor_params: FieldList,
+    pub fields: FieldList,
     pub transitions: Vec<Transition>,
 }
 
 impl std::fmt::Display for Contract {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let contract_name = &self.name;
-        let contract_params = self.contract_params.to_string_for_rust_function_signature();
-        let contract_params_init = self.contract_params.to_string_for_scilla_init();
+        let contract_params = self
+            .constructor_params
+            .to_string_for_rust_function_signature();
+        let contract_params_init = self.constructor_params.to_string_for_scilla_init();
         let contract_fields = self
-            .contract_fields
+            .fields
             .to_string_for_contract_field_getters(&format!("{contract_name}State"));
-        let contract_fields_for_state_struct =
-            self.contract_fields.to_string_for_contract_state_struct();
+        let contract_fields_for_state_struct = self.fields.to_string_for_contract_state_struct();
         let transitions = self
             .transitions
             .iter()

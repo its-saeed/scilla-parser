@@ -2,10 +2,19 @@ use std::str::FromStr;
 
 use crate::Error;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Type {
     pub scilla_type: String,
     pub rust_type: String,
+}
+
+impl Type {
+    pub fn new(scilla_type: String, rust_type: String) -> Self {
+        Self {
+            scilla_type,
+            rust_type,
+        }
+    }
 }
 
 impl FromStr for Type {

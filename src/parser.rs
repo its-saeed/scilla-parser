@@ -1,21 +1,20 @@
 pub mod contract;
 pub mod field;
 pub mod transition;
-pub mod r#type;
+// pub mod r#type;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub use contract::*;
 pub use field::*;
 use lexpr::Value;
-pub use r#type::*;
+// pub use r#type::*;
 pub use transition::*;
 
 use crate::Error;
 
-pub fn parse_sexp(sexp_path: &Path, contract_path: PathBuf) -> Result<Contract, Error> {
-    let sexp = std::fs::read_to_string(sexp_path)?;
-    let v = lexpr::from_str(&sexp)?;
+pub fn parse_sexp(sexp: &str, contract_path: &Path) -> Result<Contract, Error> {
+    let v = lexpr::from_str(sexp)?;
     let name = v["contr"][0]["cname"]["Ident"][0][1].to_string();
     let transitions = extract_transitions(&v["contr"][0]["ccomps"])?;
     let contract_params = parse_fields(&v["contr"][0]["cparams"][0])?;
@@ -24,8 +23,8 @@ pub fn parse_sexp(sexp_path: &Path, contract_path: PathBuf) -> Result<Contract, 
         path: contract_path.canonicalize()?,
         name,
         transitions,
-        contract_params,
-        contract_fields,
+        constructor_params: contract_params,
+        fields: contract_fields,
     })
 }
 
@@ -39,10 +38,9 @@ fn extract_contract_fields(cfields: &Value) -> Result<FieldList, Error> {
             _ => elem[1].to_string(),
         };
 
-        let r#type = field_type.parse()?;
         fields.push(Field {
             name: field_name,
-            r#type,
+            r#type: field_type,
         })
     }
     Ok(FieldList(fields))
@@ -65,7 +63,7 @@ fn parse_fields(cparams: &Value) -> Result<FieldList, Error> {
     let mut params = vec![];
     for elem in cparams.list_iter().unwrap() {
         let name = elem[0]["SimpleLocal"][0].to_string();
-        let r#type = elem[1][1].to_string().parse()?;
+        let r#type = elem[1][1].to_string();
         params.push(Field { name, r#type })
     }
 
