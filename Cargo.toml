@@ -1,0 +1,12 @@
+[package]
+name = "scilla2rust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lexpr = "0.2.7"
+anyhow = "1.0.75"
+convert_case = "0.6.0"
+thiserror = "1.0.50"
