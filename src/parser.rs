@@ -1,17 +1,20 @@
 pub mod contract;
 pub mod field;
 pub mod transition;
-// pub mod r#type;
 
 use std::path::Path;
 
 pub use contract::*;
 pub use field::*;
 use lexpr::Value;
-// pub use r#type::*;
 pub use transition::*;
 
 use crate::Error;
+
+pub fn parse(contract_path: &Path) -> Result<Contract, Error> {
+    let sexp = std::fs::read_to_string(contract_path)?;
+    parse_sexp(&sexp, contract_path)
+}
 
 pub fn parse_sexp(sexp: &str, contract_path: &Path) -> Result<Contract, Error> {
     let v = lexpr::from_str(sexp)?;

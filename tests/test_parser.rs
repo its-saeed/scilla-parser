@@ -1,4 +1,3 @@
-mod common;
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
