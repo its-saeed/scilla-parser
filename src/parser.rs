@@ -1,15 +1,8 @@
-pub mod contract;
-pub mod field;
-pub mod transition;
-
 use std::path::Path;
 
-pub use contract::*;
-pub use field::*;
 use lexpr::Value;
-pub use transition::*;
 
-use crate::Error;
+use crate::{Contract, Error, Field, FieldList, Transition};
 
 pub fn parse(contract_path: &Path) -> Result<Contract, Error> {
     let sexp = std::fs::read_to_string(contract_path)?;

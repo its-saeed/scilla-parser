@@ -1,4 +1,4 @@
-use super::FieldList;
+use crate::FieldList;
 
 #[derive(Debug, PartialEq)]
 pub struct Transition {

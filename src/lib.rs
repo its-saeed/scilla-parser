@@ -1,8 +1,14 @@
+pub mod contract;
 pub mod error;
+pub mod field;
 pub mod parser;
+pub mod transition;
 
+pub use contract::*;
 pub use error::Error;
+pub use field::*;
 pub use parser::*;
+pub use transition::*;
 
 use std::{path::Path, process::Command};
 

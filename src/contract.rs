@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{FieldList, Transition};
+use crate::{FieldList, Transition};
 
 #[derive(Debug, PartialEq)]
 pub struct Contract {

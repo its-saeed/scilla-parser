@@ -2,8 +2,7 @@ use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 
 use scilla2rust::{
-    parser::{parse_sexp, Contract, Field, FieldList, Transition},
-    run_scilla_fmt,
+    run_scilla_fmt, {parse_sexp, Contract, Field, FieldList, Transition},
 };
 
 #[test]
