@@ -6,7 +6,7 @@ use crate::{FieldList, Transition};
 pub struct Contract {
     pub path: PathBuf,
     pub name: String,
-    pub constructor_params: FieldList,
+    pub init_params: FieldList,
     pub fields: FieldList,
     pub transitions: Vec<Transition>,
 }

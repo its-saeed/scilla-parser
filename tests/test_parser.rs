@@ -14,7 +14,7 @@ fn test_chain_id_contract_parse() {
             name: "ChainId".to_string(),
             path: contract_path.canonicalize().unwrap(),
             fields: FieldList(vec![]),
-            constructor_params: FieldList(vec![]),
+            init_params: FieldList(vec![]),
             transitions: vec![Transition::new("EventChainID", FieldList::default())]
         }
     );
@@ -31,7 +31,7 @@ fn test_hello_world_contract_parse() {
         Contract {
             name: "HelloWorld".to_string(),
             path: contract_path.canonicalize().unwrap(),
-            constructor_params: FieldList(vec![Field::new("owner", "ByStr20")]),
+            init_params: FieldList(vec![Field::new("owner", "ByStr20")]),
             fields: FieldList(vec![Field::new("welcome_msg", "String")]),
             transitions: vec![
                 Transition::new("setHello", FieldList(vec![Field::new("msg", "String")])),
@@ -52,7 +52,7 @@ fn test_send_zil_contract_parse() {
         Contract {
             name: "SendZil".to_string(),
             path: contract_path.canonicalize().unwrap(),
-            constructor_params: FieldList(vec![]),
+            init_params: FieldList(vec![]),
             fields: FieldList(vec![Field::new("test_field", "Uint256")]),
             transitions: vec![
                 Transition::new_without_param("acceptZil".to_string()),
@@ -106,7 +106,7 @@ fn test_timestamp_contract_parse() {
         Contract {
             name: "Timestamp".to_string(),
             path: contract_path.canonicalize().unwrap(),
-            constructor_params: FieldList(vec![]),
+            init_params: FieldList(vec![]),
             fields: FieldList(vec![]),
             transitions: vec![Transition::new(
                 "EventTimestamp",

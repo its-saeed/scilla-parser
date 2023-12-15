@@ -19,7 +19,7 @@ pub fn parse_sexp(sexp: &str, contract_path: &Path) -> Result<Contract, Error> {
         path: contract_path.canonicalize()?,
         name,
         transitions,
-        constructor_params: contract_params,
+        init_params: contract_params,
         fields: contract_fields,
     })
 }
