@@ -5,7 +5,7 @@ This repository contains a Rust parser for the Scilla smart contract language. [
 Add the following to your Cargo.toml:
 ```toml
 [dependencies]
-scilla_parser = "0.3.0"
+scilla_parser = "0.4.0"
 ```
 Alternatively, You can run this command:
 ```shell

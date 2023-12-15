@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use crate::Error;
 
@@ -52,6 +52,27 @@ impl FromStr for Type {
                 _ => Ok(Type::Other(s.to_string())),
             },
             None => Ok(Self::Other(s.to_string())),
+        }
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Int32 => write!(f, "Int32"),
+            Type::Int64 => write!(f, "Int64"),
+            Type::Int128 => write!(f, "Int128"),
+            Type::Int256 => write!(f, "Int256"),
+            Type::Uint32 => write!(f, "Uint32"),
+            Type::Uint64 => write!(f, "Uint64"),
+            Type::Uint128 => write!(f, "Uint128"),
+            Type::Uint256 => write!(f, "Uint256"),
+            Type::String => write!(f, "String"),
+            Type::BNum => write!(f, "BNum"),
+            // TODO: Fix map type
+            Type::Map(ref k, ref v) => write!(f, "MapType ({}, {})", k, v),
+            Type::ByStr(n) => write!(f, "ByStr{}", n),
+            Type::Other(ref s) => write!(f, "{}", s),
         }
     }
 }
