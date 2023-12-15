@@ -4,8 +4,8 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
-    #[error("Failed to map {0} to any rust type")]
-    FailedToMapScillaTypeToRust(String),
+    #[error("The requested entry {0} does not exist in the given S-expression")]
+    NoSuchEntryInSexp(String),
 
     #[error(transparent)]
     IoError(#[from] std::io::Error),

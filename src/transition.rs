@@ -14,9 +14,9 @@ impl Transition {
         }
     }
 
-    pub fn new_without_param(name: String) -> Self {
+    pub fn new_without_param(name: &str) -> Self {
         Self {
-            name,
+            name: name.to_string(),
             params: FieldList::default(),
         }
     }

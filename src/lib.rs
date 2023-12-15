@@ -3,11 +3,13 @@ pub mod error;
 pub mod field;
 pub mod parser;
 pub mod transition;
+pub mod r#type;
 
 pub use contract::*;
 pub use error::Error;
 pub use field::*;
 pub use parser::*;
+pub use r#type::*;
 pub use transition::*;
 
 use std::{path::Path, process::Command};
