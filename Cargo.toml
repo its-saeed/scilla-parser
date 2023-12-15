@@ -2,6 +2,8 @@
 name = "scilla-parser"
 version = "0.1.0"
 edition = "2021"
+description = "Scilla smart contract parser written in Rust"
+license = "MIT"
 
 [dependencies]
 lexpr = "0.2.7"
