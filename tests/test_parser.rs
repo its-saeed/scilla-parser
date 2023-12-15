@@ -18,11 +18,6 @@ fn test_chain_id_contract_parse() {
             transitions: vec![Transition::new("EventChainID", FieldList::default())]
         }
     );
-    assert_eq!(contract.fields.len(), 0);
-    assert_eq!(contract.constructor_params.len(), 0);
-    assert_eq!(contract.transitions.len(), 1);
-    let transition = &contract.transitions[0];
-    assert_eq!(transition.name, "EventChainID");
 }
 
 #[test]
