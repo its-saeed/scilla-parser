@@ -1,5 +1,5 @@
 # Scilla Parser
-This repository contains a Rust parser for the Scilla smart contract language. Scilla is the smart contract language used in the Zilliqa blockchain.
+This repository contains a Rust parser for the Scilla smart contract language. [Scilla](https://scilla-lang.org/) is the smart contract language used in the Zilliqa blockchain.
 
 # Install
 Add the following to your Cargo.toml:
@@ -8,7 +8,7 @@ Add the following to your Cargo.toml:
 scilla_parser = "0.1.0"
 ```
 Alternatively, You can run this command:
-```bash
+```shell
 cargo add scilla_parser
 ```
 This will add the scilla_parser dependency to Cargo.toml as specified in the installation instructions above.
@@ -32,3 +32,4 @@ To parse a Scilla file:
         }
     );
 ```
+For more example take a look at the [tests](./tests/test_parser.rs).
