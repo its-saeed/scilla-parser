@@ -58,6 +58,11 @@ fn test_send_zil_contract_parse() {
                 Field::new("bool", Type::Bool),
                 Field::new("empty_bool", Type::Option(Box::new(Type::Bool))),
                 Field::new("some_int", Type::Option(Box::new(Type::Int32))),
+                Field::new(
+                    "pair",
+                    Type::Pair(Box::new(Type::String), Box::new(Type::Uint32))
+                ),
+                Field::new("list", Type::List(Box::new(Type::Int32))),
             ]),
             transitions: vec![
                 Transition::new_without_param("acceptZil"),

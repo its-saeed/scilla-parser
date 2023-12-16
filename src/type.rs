@@ -24,6 +24,8 @@ pub enum Type {
     // ADT
     Bool,
     Option(Box<Type>),
+    Pair(Box<Type>, Box<Type>),
+    List(Box<Type>),
 
     Other(String),
 }
@@ -56,6 +58,11 @@ impl FromStr for Type {
                 "ADT" => match v["Ident"]["SimpleLocal"][0].as_symbol().unwrap() {
                     "Bool" => Ok(Type::Bool),
                     "Option" => Ok(Type::Option(Box::new(v[2][0].to_string().parse()?))),
+                    "List" => Ok(Type::List(Box::new(v[2][0].to_string().parse()?))),
+                    "Pair" => Ok(Type::Pair(
+                        Box::new(v[2][0].to_string().parse()?),
+                        Box::new(v[2][1].to_string().parse()?),
+                    )),
                     _ => Ok(Type::Other(v["Ident"]["SimpleLocal"][0].to_string())),
                 },
                 _ => Ok(Type::Other(s.to_string())),
@@ -82,6 +89,8 @@ impl Display for Type {
             // TODO: Fix map type
             Type::Map(ref k, ref v) => write!(f, "MapType ({}, {})", k, v),
             Type::Option(ref k) => write!(f, "Option ({})", k),
+            Type::List(ref k) => write!(f, "List ({})", k),
+            Type::Pair(ref k, ref v) => write!(f, "Pair ({}, {})", k, v),
             Type::ByStr(n) => write!(f, "ByStr{}", n),
             Type::Other(ref s) => write!(f, "{}", s),
         }

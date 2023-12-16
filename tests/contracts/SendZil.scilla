@@ -8,6 +8,16 @@ field empty_bool : Option Bool = None {Bool}
 field some_int : Option Int32 = let ten = Int32 10 in
   Some {Int32} ten
 
+field pair: Pair String Uint32 =
+              let s1 = "Hello" in
+              let num = Uint32 2 in
+              Pair {String Uint32} s1 num
+
+field list : List Int32 =
+  let nil = Nil {Int32} in
+  let one = Int32 1 in
+Cons {Int32} one nil
+
 transition acceptZil ()
   accept;
   v <- _balance;
