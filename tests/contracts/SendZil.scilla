@@ -3,6 +3,10 @@ scilla_version 0
 contract SendZil
 ()
 field test_field : Uint256 = Uint256 0
+field bool : Bool = True
+field empty_bool : Option Bool = None {Bool}
+field some_int : Option Int32 = let ten = Int32 10 in
+  Some {Int32} ten
 
 transition acceptZil ()
   accept;

@@ -53,7 +53,12 @@ fn test_send_zil_contract_parse() {
             name: "SendZil".to_string(),
             path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![]),
-            fields: FieldList(vec![Field::new("test_field", Type::Uint256)]),
+            fields: FieldList(vec![
+                Field::new("test_field", Type::Uint256),
+                Field::new("bool", Type::Bool),
+                Field::new("empty_bool", Type::Option(Box::new(Type::Bool))),
+                Field::new("some_int", Type::Option(Box::new(Type::Int32))),
+            ]),
             transitions: vec![
                 Transition::new_without_param("acceptZil"),
                 Transition::new(
