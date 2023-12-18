@@ -86,11 +86,10 @@ impl Display for Type {
             Type::String => write!(f, "String"),
             Type::BNum => write!(f, "BNum"),
             Type::Bool => write!(f, "Bool"),
-            // TODO: Fix map type
-            Type::Map(ref k, ref v) => write!(f, "MapType ({}, {})", k, v),
-            Type::Option(ref k) => write!(f, "Option ({})", k),
-            Type::List(ref k) => write!(f, "List ({})", k),
-            Type::Pair(ref k, ref v) => write!(f, "Pair ({}, {})", k, v),
+            Type::Map(ref k, ref v) => write!(f, "(Map {}, {})", k, v),
+            Type::Option(ref k) => write!(f, "(Option {})", k),
+            Type::List(ref k) => write!(f, "(List {})", k),
+            Type::Pair(ref k, ref v) => write!(f, "(Pair {} {})", k, v),
             Type::ByStr(n) => write!(f, "ByStr{}", n),
             Type::Other(ref s) => write!(f, "{}", s),
         }
@@ -154,5 +153,39 @@ mod tests {
             .unwrap();
 
         assert_eq!(option_bool_type, Type::Option(Box::new(Type::Bool)));
+    }
+
+    #[test]
+    fn test_type_to_string() {
+        //(List (Pair ByStr20 (List (Pair ByStr20 Uint32))))
+        let list_type = Type::List(Box::new(Type::Pair(
+            Box::new(Type::ByStr(20)),
+            Box::new(Type::List(Box::new(Type::Pair(
+                Box::new(Type::ByStr(20)),
+                Box::new(Type::Uint32),
+            )))),
+        )));
+
+        assert_eq!(
+            "(List (Pair ByStr20 (List (Pair ByStr20 Uint32))))",
+            list_type.to_string()
+        );
+
+        // (List (Pair ByStr20 (List (Pair ByStr20 (List (Pair Uint32 Uint128))))))
+        let list_type = Type::List(Box::new(Type::Pair(
+            Box::new(Type::ByStr(20)),
+            Box::new(Type::List(Box::new(Type::Pair(
+                Box::new(Type::ByStr(20)),
+                Box::new(Type::List(Box::new(Type::Pair(
+                    Box::new(Type::Uint32),
+                    Box::new(Type::Uint128),
+                )))),
+            )))),
+        )));
+
+        assert_eq!(
+            "(List (Pair ByStr20 (List (Pair ByStr20 (List (Pair Uint32 Uint128))))))",
+            list_type.to_string()
+        );
     }
 }
