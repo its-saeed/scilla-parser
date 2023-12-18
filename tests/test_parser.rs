@@ -200,3 +200,301 @@ fn test_fungible_token_parse() {
         }
     );
 }
+
+#[test]
+fn test_staking_proxy_v2_parse() {
+    let contract_path = PathBuf::from("tests/contracts/staking_proxy_v2.scilla");
+    let contract = parse(&contract_path).unwrap();
+    assert_eq!(
+        contract,
+        Contract {
+            name: "SSNListProxy_V2".to_string(),
+            path: contract_path.canonicalize().unwrap(),
+            init_params: FieldList(vec![
+                Field::new("init_implementation", Type::ByStr(20)),
+                Field::new("init_admin", Type::ByStr(20)),
+            ]),
+            fields: FieldList(vec![
+                Field::new("implementation", Type::ByStr(20)),
+                Field::new("admin", Type::ByStr(20)),
+                Field::new("stagingadmin", Type::Option(Box::new(Type::ByStr(20)))),
+            ]),
+            transitions: vec![
+                Transition::new(
+                    "UpgradeTo",
+                    FieldList(vec![Field::new("newImplementation", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeProxyAdmin",
+                    FieldList(vec![Field::new("newAdmin", Type::ByStr(20))])
+                ),
+                Transition::new("ClaimProxyAdmin", FieldList::default()),
+                Transition::new(
+                    "OptInSSNToConsensusPoolAdminOverride",
+                    FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "OptOutSSNFromConsensusPoolAdminOverride",
+                    FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "RemoveFromConsensusPoolAdminOverride",
+                    FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeMinCommissionRate",
+                    FieldList(vec![Field::new("mincommrate_value", Type::Uint128)])
+                ),
+                Transition::new(
+                    "AddSSNNonStaking",
+                    FieldList(vec![
+                        Field::new("ssnaddr", Type::ByStr(20)),
+                        Field::new("name", Type::String),
+                        Field::new("urlraw", Type::String),
+                        Field::new("urlapi", Type::String),
+                        Field::new("comm", Type::Uint128)
+                    ])
+                ),
+                Transition::new("AddSSNToConsensusPool", FieldList::default()),
+                Transition::new("RemoveSSNFromConsensusPool", FieldList::default()),
+                Transition::new(
+                    "WithdrawStakeRewardsForCycles",
+                    FieldList(vec![
+                        Field::new("ssnaddr", Type::ByStr(20)),
+                        Field::new("cycles", Type::Uint32)
+                    ])
+                ),
+                Transition::new(
+                    "CopySSNDelegAmt",
+                    FieldList(vec![
+                        Field::new("ssn", Type::ByStr(20)),
+                        Field::new(
+                            "keys",
+                            Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::Uint128)
+                            )))
+                        )
+                    ])
+                ),
+                Transition::new(
+                    "MigrateStakeSSNPerCycle",
+                    FieldList(vec![
+                        Field::new("ssn", Type::ByStr(20)),
+                        Field::new(
+                            "keys",
+                            Type::List(Box::new(Type::Pair(
+                                Box::new(Type::Uint32),
+                                Box::new(Type::Pair(
+                                    Box::new(Type::Uint128),
+                                    Box::new(Type::Uint128)
+                                ))
+                            )))
+                        )
+                    ])
+                ),
+                Transition::new(
+                    "CopyBuffDepositDeleg",
+                    FieldList(vec![
+                        Field::new("deleg", Type::ByStr(20)),
+                        Field::new(
+                            "keys",
+                            Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::List(Box::new(Type::Pair(
+                                    Box::new(Type::Uint32),
+                                    Box::new(Type::Uint128)
+                                ))))
+                            )))
+                        )
+                    ])
+                ),
+                Transition::new(
+                    "CopyLastBufDepositCycleDelegList",
+                    FieldList(vec![Field::new(
+                        "last_buf_deposit_cycle_deleg_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::Uint32),
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyLastWithdrawCycleDelegList",
+                    FieldList(vec![Field::new(
+                        "last_withdraw_cycle_deleg_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::Uint32),
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyDelegStakePerCycleList",
+                    FieldList(vec![Field::new(
+                        "deleg_stake_per_cycle_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::List(Box::new(Type::Pair(
+                                    Box::new(Type::Uint32),
+                                    Box::new(Type::Uint128)
+                                )))),
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyDirectDepositDelegList",
+                    FieldList(vec![Field::new(
+                        "direct_deposit_deleg_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::List(Box::new(Type::Pair(
+                                    Box::new(Type::Uint32),
+                                    Box::new(Type::Uint128)
+                                )))),
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyBuffDepositDelegList",
+                    FieldList(vec![Field::new(
+                        "buff_deposit_deleg_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::List(Box::new(Type::Pair(
+                                    Box::new(Type::Uint32),
+                                    Box::new(Type::Uint128)
+                                )))),
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyDepositAmtDelegList",
+                    FieldList(vec![Field::new(
+                        "deposit_amt_deleg_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::ByStr(20)),
+                                Box::new(Type::Uint128)
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyWithDrawalPendingList",
+                    FieldList(vec![Field::new(
+                        "withdrawal_pending_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::BNum),
+                                Box::new(Type::Uint128)
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyCommForSSNList",
+                    FieldList(vec![Field::new(
+                        "comm_for_ssn_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::List(Box::new(Type::Pair(
+                                Box::new(Type::Uint32),
+                                Box::new(Type::Uint128)
+                            ))))
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "CopyDelegSwapRequest",
+                    FieldList(vec![Field::new(
+                        "deleg_swap_request_list",
+                        Type::List(Box::new(Type::Pair(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::ByStr(20)),
+                        )))
+                    )])
+                ),
+                Transition::new(
+                    "ChangeCycleRewardsDeleg",
+                    FieldList(vec![Field::new("input_cycle_rewards_deleg", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeVerifierReward",
+                    FieldList(vec![Field::new("input_verifier_reward", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeAvailableWithdrawal",
+                    FieldList(vec![Field::new(
+                        "input_available_withdrawal",
+                        Type::Uint128
+                    )])
+                ),
+                Transition::new(
+                    "ChangeCurrentDeleg",
+                    FieldList(vec![Field::new("input_current_deleg", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeCurrentSSN",
+                    FieldList(vec![Field::new("input_current_ssn", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeNewDeleg",
+                    FieldList(vec![Field::new("input_new_deleg", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeVerifier",
+                    FieldList(vec![Field::new("input_verifier", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeVerifierReceivingAddr",
+                    FieldList(vec![Field::new(
+                        "input_verifier_receiving_addr",
+                        Type::ByStr(20)
+                    )])
+                ),
+                Transition::new(
+                    "ChangeMinStake",
+                    FieldList(vec![Field::new("input_minstake", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeMinDelegStake",
+                    FieldList(vec![Field::new("input_mindelegstake", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeLastRewardCycle",
+                    FieldList(vec![Field::new("input_lastrewardcycle", Type::Uint32)])
+                ),
+                Transition::new(
+                    "ChangeMaxCommChangeRate",
+                    FieldList(vec![Field::new("input_maxcommchangerate", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeMaxCommRate",
+                    FieldList(vec![Field::new("input_maxcommrate", Type::Uint128)])
+                ),
+                Transition::new(
+                    "ChangeTotalStakeAmount",
+                    FieldList(vec![Field::new("input_totalstakeamount", Type::Uint128)])
+                ),
+            ]
+        }
+    );
+}
