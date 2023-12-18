@@ -1,0 +1,1712 @@
+scilla_version 0
+
+import ListUtils IntUtils BoolUtils PairUtils
+
+(***************************************************)
+(*               Associated library                *)
+(***************************************************)
+library StZIL
+
+type Withdrawal =
+  | Withdrawal of Uint128 Uint128
+
+type Error =
+  (* ZRC-2 error codes *)
+  | CodeIsSender
+  | CodeInsufficientFunds
+  | CodeInsufficientAllowance
+  | CodeNotOwner
+  (* Custom error codes *)
+  | AdminValidationFailed
+  | BufferAddrUnknown
+  | BufferAlreadyDrained
+  | BufferNotDrained
+  | BufferOrHolderValidationFailed
+  | BuffersEmpty
+  | CantFetchZimplDelegExists
+  | CantFetchZimplDelegSsnExists
+  | CantFetchZimplFields
+  | CantFetchZimplHolderStakes
+  | ChownStakeCantFetchRemote
+  | ChownStakeSwapRequestNotFound
+  | ClaimWithdrawalNoUnbonded
+  | CompleteWithdrawalFundsMismatch
+  | DelegAddrUnknown
+  | DelegDoesNotExistAtSSN
+  | DelegHasNoSufficientAmt
+  | DelegStakeFundsMismatch
+  | DelegStakeNotEnough
+  | InvalidTotalAmt
+  | InvalidRewardsFee
+  | HolderAlreadySet
+  | NotPausedIn
+  | NotPausedOut
+  | NotPausedZrc2
+  | PausedIn
+  | PausedOut
+  | PausedZrc2
+  | SsnAddressesEmpty
+  | SsnAddressDoesNotExist
+  | SsnAddressExists
+  | StagingOwnerNotExists
+  | StagingOwnerValidationFailed
+  | WithdrawAmountTooBig
+  | WithdrawTokensAmtLessThanFee
+
+let make_error =
+  fun (result: Error) =>
+    let result_code =
+      match result with
+      (* ZRC-2 error codes *)
+      | CodeIsSender                     => Int32 -1
+      | CodeInsufficientFunds            => Int32 -2
+      | CodeInsufficientAllowance        => Int32 -3
+      | CodeNotOwner                     => Int32 -4
+      (* Custom error codes *)
+      | AdminValidationFailed            => Int32 -100
+      | BufferAddrUnknown                => Int32 -101
+      | BufferAlreadyDrained             => Int32 -102
+      | BufferNotDrained                 => Int32 -103
+      | BufferOrHolderValidationFailed   => Int32 -104
+      | BuffersEmpty                     => Int32 -105
+      | CantFetchZimplDelegExists        => Int32 -106
+      | CantFetchZimplDelegSsnExists     => Int32 -107
+      | CantFetchZimplFields             => Int32 -108
+      | CantFetchZimplHolderStakes       => Int32 -109
+      | ChownStakeCantFetchRemote        => Int32 -110
+      | ChownStakeSwapRequestNotFound    => Int32 -111
+      | ClaimWithdrawalNoUnbonded        => Int32 -112
+      | CompleteWithdrawalFundsMismatch  => Int32 -113
+      | DelegAddrUnknown                 => Int32 -114
+      | DelegDoesNotExistAtSSN           => Int32 -115
+      | DelegHasNoSufficientAmt          => Int32 -116
+      | DelegStakeFundsMismatch          => Int32 -117
+      | DelegStakeNotEnough              => Int32 -118
+      | InvalidTotalAmt                  => Int32 -119
+      | InvalidRewardsFee                => Int32 -122
+      | HolderAlreadySet                 => Int32 -124
+      | NotPausedIn                      => Int32 -125
+      | NotPausedOut                     => Int32 -126
+      | NotPausedZrc2                    => Int32 -127
+      | PausedOut                        => Int32 -129
+      | PausedIn                         => Int32 -130
+      | PausedZrc2                       => Int32 -131
+      | SsnAddressesEmpty                => Int32 -132
+      | SsnAddressDoesNotExist           => Int32 -133
+      | SsnAddressExists                 => Int32 -134
+      | StagingOwnerNotExists            => Int32 -135
+      | StagingOwnerValidationFailed     => Int32 -136
+      | WithdrawAmountTooBig             => Int32 -137
+      | WithdrawTokensAmtLessThanFee     => Int32 -138
+      end
+    in
+    { _exception: "Error"; code: result_code }
+
+let bystr20_eq : ByStr20 -> ByStr20 -> Bool =
+  fun (x : ByStr20) =>
+  fun (y : ByStr20) =>
+    builtin eq x y
+
+let uint128_to_uint256 : Uint128 -> Uint256 =
+  fun (x : Uint128) =>
+    let ox256 = builtin to_uint256 x in
+      match ox256 with
+      | None =>
+        (* this never happens, hence we throw a division by zero exception just in case *)
+        let zero = Uint256 0 in
+        builtin div zero zero
+      | Some x256 => x256
+      end
+
+let muldiv : Uint128 -> Uint128 -> Uint128 -> Uint128 =
+    fun (x : Uint128) =>
+    fun (y : Uint128) =>
+    fun (z : Uint128) =>
+      let x256 = uint128_to_uint256 x in
+      let y256 = uint128_to_uint256 y in
+      let z256 = uint128_to_uint256 z in
+      let x_mul_y256 = builtin mul x256 y256 in
+      let res256 = builtin div x_mul_y256 z256 in
+      let ores128 = builtin to_uint128 res256 in
+      match ores128 with
+      | None =>
+        (* this must never happen, hence we throw an integer overflow exception *)
+        let max_uint128 = Uint128 340282366920938463463374607431768211455 in
+        let fourtytwo128 = Uint128 42 in
+        builtin mul max_uint128 fourtytwo128
+      | Some res128 =>
+        res128
+      end
+
+let one_msg =
+  fun (msg : Message) =>
+    let nil_msg = Nil {Message} in
+    Cons {Message} msg nil_msg
+
+let two_msgs =
+  fun (msg1 : Message) =>
+  fun (msg2 : Message) =>
+    let msgs_tmp = one_msg msg2 in
+    Cons {Message} msg1 msgs_tmp
+
+let false = False
+let true = True
+let uint128_zero = Uint128 0
+let uint128_one = Uint128 1
+let uint32_zero = Uint32 0
+let uint32_one = Uint32 1
+let bystr20_zero = 0x0000000000000000000000000000000000000000
+let fee_denom = Uint128 10000 (* fee denominated in basis points (1 b.p. = 0.01%) *)
+
+let option_value =
+  tfun 'A =>
+  fun (default: 'A) =>
+  fun (opt_val: Option 'A) =>
+    match opt_val with
+    | Some v => v
+    | None => default
+    end
+
+let option_uint32_value =
+  let f = @option_value Uint32 in
+  f uint32_zero
+
+let option_uint128_value =
+  let f = @option_value Uint128 in
+  f uint128_zero
+
+let option_bystr20_value =
+  let f = @option_value ByStr20 in
+  f bystr20_zero
+
+let list_bystr20_length =
+  fun (l : List ByStr20) =>
+    let flist_length = @list_length ByStr20 in
+    flist_length l
+
+let not_equal_bystr20 = fun (a: ByStr20) => fun(b: ByStr20) =>
+  let equal = builtin eq a b in
+  negb equal (* from BoolUtils *)
+
+let addfunds_tag = "AddFunds"
+
+(* active buffer is remainder of division of lastrewardcycle by buffers count *)
+let get_active_buffer_addr =
+  fun (l : List ByStr20) =>
+  fun (lastrewardcycle : Uint32) =>
+    let l_length = list_bystr20_length l in
+    let active = builtin rem lastrewardcycle l_length in
+    let flist_nth = @list_nth ByStr20 in
+    let addr_o = flist_nth active l in
+    option_bystr20_value addr_o
+
+(* get active ssn address; it's remainder of division of ssn_index by ssn addresses count *)
+let get_active_ssn_addr =
+  fun (l : List ByStr20) =>
+  fun (ssn_index : Uint128) =>
+    let l_length = list_bystr20_length l in
+    let opt_l_length_uint128 = builtin to_uint128 l_length in
+    let l_length_uint128 = option_uint128_value opt_l_length_uint128 in
+    let active_uint128 = builtin rem ssn_index l_length_uint128 in
+    let opt_active_uint32 = builtin to_uint32 active_uint128 in
+    let active_uint32 = option_uint32_value opt_active_uint32 in
+    let flist_nth = @list_nth ByStr20 in
+    let addr_o = flist_nth active_uint32 l in
+    option_bystr20_value addr_o
+
+(* remove not unbonded blocks from blocks list *)
+let leave_unbonded =
+  fun (current_bnum: BNum) =>
+  fun (bnum_req_delta: Uint128) =>
+  fun (blist: List BNum) =>
+    let is_unbonded =
+      fun (withdraw_inited_bnum: BNum) =>
+        let btest = builtin badd withdraw_inited_bnum bnum_req_delta in
+        builtin blt btest current_bnum in
+    let filterBNum = @list_filter BNum in
+    filterBNum is_unbonded blist
+
+(* check if address is buffer address *)
+let is_addr_in_list =
+  fun(l: List ByStr20) =>
+  fun(addr: ByStr20) =>
+    let feq = bystr20_eq addr in
+    let flist_exists = @list_exists ByStr20 in
+    flist_exists feq l
+
+let remove_addr_from_list = fun(addr: ByStr20) => fun(l: List ByStr20) =>
+  let f = not_equal_bystr20 addr in
+  let filterBystr20 = @list_filter ByStr20 in
+  filterBystr20 f l
+
+(* sum the integer type values in a map *)
+let sum_amount = fun(m: Map ByStr20 Uint128) =>
+  (* create a list of (key,values) pairs of the map *)
+  let l = builtin to_list m in
+  (* use fold to sum up the second elements of all pairs *)
+  let folder = @list_foldl (Pair ByStr20 Uint128) Uint128 in
+  let init = Uint128 0 in (* initialize the accumulator at 0 *)
+  let addition = (* add elements to accumulator: extract second element of Pair and add *)
+    fun(acc: Uint128) =>
+    fun(pair: Pair ByStr20 Uint128) =>
+      let the_int = @snd ByStr20 Uint128 in (* get the int *)
+      let int = the_int pair in
+      builtin add acc int in (* add int to accumulator *)
+    folder addition init l (* apply to entire list of pairs *)
+
+let bool_to_uint32 = fun(bval: Bool) =>
+  match bval with
+  | True =>
+    uint32_one
+  | False =>
+    uint32_zero
+  end
+
+(* get heaviest ssn address from provided map[address]amount *)
+(* address must have amount enough to withdraw requested withdraw_amount: Uint128 *)
+(* non-whitelisted (slashed) address will be returned as a priority *)
+let get_heaviest = fun(m: Map ByStr20 Uint128) => fun(whitelist: List ByStr20) => fun(withdraw_amount: Uint128) =>
+  (* create a list of (key,values) pairs of the map *)
+  let l = builtin to_list m in (* list consist of Pairs (ssnaddr, amount) *)
+  (* use foldl to create heaviest_by_status map[slashed=0,whitelisted=1]HeaviestPair(ssnaddr,amount)  *)
+  let folder = @list_foldl (Pair ByStr20 Uint128) (Map Uint32 (Pair ByStr20 Uint128)) in (* @list_foldl 'Next 'Accumulator *)
+  let init = Emp Uint32 (Pair ByStr20 Uint128) in (* initialize the accumulator as map[slashed=0,whitelisted=1]Pair(address,amount) *)
+  let compare = (* update accumulator function *)
+    fun(acc: Map Uint32 (Pair ByStr20 Uint128)) =>
+    fun(nextpair: Pair ByStr20 Uint128) =>
+      let the_int_next = @snd ByStr20 Uint128 in
+      let int_next = the_int_next nextpair in
+      (* check if nextpair's amount is less then withdraw_amount *)
+      let is_next_less_than_amount = builtin lt int_next withdraw_amount in
+      match is_next_less_than_amount with
+      | True =>
+        acc (* nextpair's amount less then withdraw_amount, so we skip it, and keep accumulator as is *)
+      | False =>
+        match nextpair with
+        | Pair next_ssnaddr next_amount =>
+          let status_bool = is_addr_in_list whitelist next_ssnaddr in
+          let status = bool_to_uint32 status_bool in (* 0 - address slashed; 1 - address whitelisted *)
+          let curval = builtin get acc status in
+          match curval with
+          | Some (Pair acc_ssnaddr acc_amount) =>
+            let is_next_less_than_acc = builtin lt next_amount acc_amount in
+            match is_next_less_than_acc with
+            | True =>
+              (* nextpair's amount less then acc[status]amount, so we ignore nextpair, and keep acc[status]Pair as is *)
+              acc
+            | False =>
+              builtin put acc status nextpair
+            end
+          | None =>
+            (* there is no Pair for this status in accumulator, add it *)
+            builtin put acc status nextpair
+          end
+        end
+      end in
+  let heaviest_by_status = folder compare init l in (* apply fold function to list *)
+  let heaviest_slashed = builtin get heaviest_by_status uint32_zero in (* first, check slashed *)
+  match heaviest_slashed with
+  | Some (Pair slashed_ssnaddr slashed_amount) =>
+    Some {ByStr20} slashed_ssnaddr
+  | None =>
+    let heaviest_whitelisted = builtin get heaviest_by_status uint32_one in (* if slashed not found, check whitelisted *)
+    match heaviest_whitelisted with
+    | Some (Pair whitelisted_ssnaddr whitelisted_amount) =>
+      Some {ByStr20} whitelisted_ssnaddr
+    | None =>
+      None {ByStr20} (* nothing found *)
+    end
+  end
+
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+
+contract StZIL(
+  contract_owner            : ByStr20,
+  init_admin_address        : ByStr20,
+  init_zimpl_address        : ByStr20,
+  name                      : String,
+  symbol                    : String,
+  decimals                  : Uint32,
+  init_supply               : Uint128
+)
+
+field owner_address          : ByStr20 = contract_owner
+field admin_address          : ByStr20 = init_admin_address
+field treasury_address       : ByStr20 = init_admin_address
+field withdrawal_fee_address : ByStr20 = init_admin_address
+field zimpl_address          : ByStr20 = init_zimpl_address
+field holder_address         : ByStr20 = bystr20_zero
+field buffers_addresses      : List ByStr20 = Nil {ByStr20}
+field ssn_addresses          : List ByStr20 = Nil {ByStr20}
+field staging_owner_address  : Option ByStr20 = None {ByStr20}
+
+field is_paused_in  : Bool = True
+field is_paused_out : Bool = True
+field is_paused_zrc2: Bool = True
+
+(* 10 ZIL expresssed in Qa where 1 ZIL = 10^12 Qa *)
+field mindelegstake     : Uint128 = Uint128 10000000000000
+field withdrawal_fee    : Uint128 = Uint128 0
+field rewards_fee       : Uint128 = uint128_zero
+field totalstakeamount  : Uint128 = uint128_zero
+field autorestakeamount : Uint128 = uint128_zero
+field total_supply      : Uint128 = uint128_zero
+
+(* Delegator -> Token balance *)
+field balances: Map ByStr20 Uint128 = Emp ByStr20 Uint128
+
+(* Sender -> (Spender -> Allowance) *)
+field allowances: Map ByStr20 (Map ByStr20 Uint128) = Emp ByStr20 (Map ByStr20 Uint128)
+
+(* BlockNumber -> AddressOfDeleg ->  Withdrawal of Token:Uint128 Stake:Uint128 *)
+field withdrawal_pending:              Map BNum (Map ByStr20 Withdrawal) = Emp BNum (Map ByStr20 Withdrawal)
+
+(* AddressOfDeleg -> BlockNumber -> Withdrawal of Token:Uint128 Stake:Uint128 *)
+field withdrawal_pending_of_delegator: Map ByStr20 (Map BNum Withdrawal) = Emp ByStr20 (Map BNum Withdrawal)
+
+(* AddressOfDeleg ->  Deposit *)
+field withdrawal_unbonded: Map ByStr20 Withdrawal = Emp ByStr20 Withdrawal
+
+field buffer_drained_cycle: Map ByStr20 Uint32 = Emp ByStr20 Uint32
+field ssn_index: Uint128 = uint128_zero
+
+field tmp_delegator                     : Option ByStr20 = None {ByStr20}
+field tmp_stake_delegate_amount         : Uint128        = uint128_zero
+field tmp_complete_withdrawal_available : Uint128        = uint128_zero
+field tmp_ssn_addr_in                   : ByStr20        = bystr20_zero
+field tmp_ssn_addr_out                  : ByStr20        = bystr20_zero
+field tmp_bnum                          : BNum           = BNum 0
+(* flag of existence ssnlist.deposit_amt_deleg[deleg] *)
+field tmp_deleg_exists                  : Bool           = False
+
+field local_bnum_req                    : Uint128        = Uint128 35000
+field local_lastrewardcycle             : Uint32         = uint32_one
+
+(************************************************************)
+(* @dev: Procedures                                         *)
+(************************************************************)
+
+procedure ThrowError(err: Error)
+  e = make_error err;
+  throw e
+end
+
+procedure RequireAdmin()
+  contractadmin_tmp <- admin_address;
+  is_admin = builtin eq _sender contractadmin_tmp;
+  match is_admin with
+  | True  =>
+  | False =>
+    e = AdminValidationFailed;
+    ThrowError e
+  end
+end
+
+procedure RequireOwner()
+  owner <- owner_address;
+  is_owner = builtin eq _sender owner;
+  match is_owner with
+  | True  =>
+  | False =>
+    e = CodeNotOwner;
+    ThrowError e
+  end
+end
+
+procedure RequireNotPausedIn()
+  paused <- is_paused_in;
+  match paused with
+  | False =>
+  | True =>
+    error = PausedIn;
+    ThrowError error
+  end
+end
+
+procedure RequireNotPausedOut()
+  paused <- is_paused_out;
+  match paused with
+  | False =>
+  | True =>
+    error = PausedOut;
+    ThrowError error
+  end
+end
+
+procedure RequireNotPausedZrc2()
+  paused <- is_paused_zrc2;
+  match paused with
+  | False =>
+  | True =>
+    error = PausedZrc2;
+    ThrowError error
+  end
+end
+
+procedure RequireBuffers(buffers: List ByStr20)
+  llen = list_bystr20_length buffers;
+  buffers_empty = builtin eq uint32_zero llen;
+  match buffers_empty with
+  | True =>
+    error = BuffersEmpty;
+    ThrowError error
+  | False =>
+  end
+end
+
+procedure RequireBuffer(address: ByStr20)
+  buffers_addrs <- buffers_addresses;
+  is_buffer = is_addr_in_list buffers_addrs address;
+  match is_buffer with
+  | True =>
+  | False =>
+    e = BufferAddrUnknown;
+    ThrowError e
+  end
+end
+
+procedure RequireNotDrainedBuffer(buffer_addr: ByStr20, cycle: Uint32)
+  o_buffer_cycle <- buffer_drained_cycle[buffer_addr];
+  match o_buffer_cycle with
+  | Some buffer_cycle =>
+    is_not_drained = builtin lt buffer_cycle cycle;
+    match is_not_drained with
+    | True =>
+    | False =>
+      e = BufferAlreadyDrained;
+      ThrowError e
+    end
+  | None =>
+  end
+end
+
+procedure RequireDrainedBuffer(buffer_addr: ByStr20, cycle: Uint32)
+  o_buffer_cycle <- buffer_drained_cycle[buffer_addr];
+  match o_buffer_cycle with
+  | Some buffer_cycle =>
+    is_not_drained = builtin lt buffer_cycle cycle;
+    match is_not_drained with
+    | True =>
+      e = BufferNotDrained;
+      ThrowError e
+    | False =>
+    end
+  | None =>
+    e = BufferNotDrained;
+    ThrowError e
+  end
+end
+
+procedure RequireBufferOrHolder(address: ByStr20)
+  buffers_addrs <- buffers_addresses;
+  is_buffer = is_addr_in_list buffers_addrs address;
+
+  holder <- holder_address;
+  is_holder = builtin eq address holder;
+
+  is_buffer_or_holder = orb is_buffer is_holder;
+
+  match is_buffer_or_holder with
+  | True  =>
+  | False =>
+    e = BufferOrHolderValidationFailed;
+    ThrowError e
+  end
+end
+
+procedure RequireSsnAddresses(ssnlist: List ByStr20)
+  llen = list_bystr20_length ssnlist;
+  list_empty = builtin eq uint32_zero llen;
+  match list_empty with
+  | True =>
+    error = SsnAddressesEmpty;
+    ThrowError error
+  | False =>
+  end
+end
+
+procedure TransferFunds(tag: String, amt: Uint128, recipient: ByStr20)
+  msg = {_tag: tag; _recipient: recipient; _amount: amt};
+  msgs = one_msg msg;
+  send msgs
+end
+
+(* get active ssn address by counter; save address to tmp field; increment counter *)
+procedure GetSsnAddressForInput()
+  var_ssn_addresses <- ssn_addresses;
+  var_ssn_index <- ssn_index;
+  active_ssn_addr = get_active_ssn_addr var_ssn_addresses var_ssn_index;
+  tmp_ssn_addr_in := active_ssn_addr;
+  new_ssn_index = builtin add var_ssn_index uint128_one;
+  ssn_index := new_ssn_index
+end
+
+procedure GetSsnAddressForOutput(withdraw_amount: Uint128)
+  implAddr <- zimpl_address;
+  implAddrTypeTest <- & implAddr as ByStr20 with contract
+    field deposit_amt_deleg: Map ByStr20 (Map ByStr20 Uint128)
+  end;
+  match implAddrTypeTest with
+  | Some z =>
+    var_holder_addr <- holder_address;
+    o_deposit_amt_holder <- & z.deposit_amt_deleg[var_holder_addr];
+    match o_deposit_amt_holder with
+    | Some map_ssn_amount =>
+      (* holder has some deposits *)
+      ssn_whitelist <- ssn_addresses;
+      o_ssnaddr = get_heaviest map_ssn_amount ssn_whitelist withdraw_amount;
+      match o_ssnaddr with
+      | Some ssnaddr =>
+        (* heaviest ssnaddress found *)
+        tmp_ssn_addr_out := ssnaddr
+      | None =>
+        (* address that meets withdrawal request requirements was not found *)
+        e = WithdrawAmountTooBig;
+        ThrowError e
+      end
+    | None =>
+      (* holder has no deposits, it's almost impossible case *)
+      e = WithdrawAmountTooBig;
+      ThrowError e
+    end
+  | None =>
+      e = CantFetchZimplHolderStakes;
+      ThrowError e
+  end
+end
+
+(* fetch state fields from ssnlist contract *)
+procedure FetchRemoteZimplFields()
+  implAddr <- zimpl_address;
+  implAddrTypeTest <- & implAddr as ByStr20 with contract field bnum_req : Uint128, field lastrewardcycle: Uint32 end;
+  match implAddrTypeTest with
+  | Some z =>
+    bnum_req <- & z.bnum_req;
+    local_bnum_req := bnum_req;
+    lrc <- & z.lastrewardcycle;
+    local_lastrewardcycle := lrc
+  | None =>
+    e = CantFetchZimplFields;
+    ThrowError e
+  end
+end
+
+(* check if delegator address exists at deposit_amt_deleg map of ssnlist contract *)
+procedure FetchZimplDelegExists(deleg: ByStr20)
+  implAddr <- zimpl_address;
+  implAddrTypeTest <- & implAddr as ByStr20 with contract
+    field deposit_amt_deleg: Map ByStr20 (Map ByStr20 Uint128),
+    field lastrewardcycle: Uint32
+  end;
+  match implAddrTypeTest with
+  | Some z =>
+    lrc <- & z.lastrewardcycle;
+    local_lastrewardcycle := lrc;
+    o_deposit_amt_deleg <- & z.deposit_amt_deleg[deleg];
+    match o_deposit_amt_deleg with
+    | Some amt =>
+      tmp_deleg_exists := true
+    | None =>
+      tmp_deleg_exists := false
+    end
+  | None =>
+      e = CantFetchZimplDelegExists;
+      ThrowError e
+  end
+end
+
+(* procedure checks existence of ssnlist.deposit_amt_deleg[deleg][ssnaddr] and throw error if not found *)
+(* it's used in rewards claiming process *)
+procedure RequireZimplDelegSsnExists(deleg: ByStr20, ssnaddr: ByStr20)
+  implAddr <- zimpl_address;
+  implAddrTypeTest <- & implAddr as ByStr20 with contract
+    field deposit_amt_deleg: Map ByStr20 (Map ByStr20 Uint128)
+  end;
+  match implAddrTypeTest with
+  | Some z =>
+    o_deposit_amt_deleg <- & z.deposit_amt_deleg[deleg][ssnaddr];
+    match o_deposit_amt_deleg with
+    | Some amt =>
+      (* ssnlist map entry found, we can claim rewards safely *)
+    | None =>
+      e = DelegDoesNotExistAtSSN;
+      ThrowError e
+    end
+  | None =>
+      e = CantFetchZimplDelegSsnExists;
+      ThrowError e
+  end
+end
+
+(************************************************************)
+(* @dev: Holder & Buffer actions                            *)
+(************************************************************)
+
+procedure HolderWithdrawStakeAmt(ssnaddr: ByStr20, amount: Uint128)
+  holder_addr <- holder_address;
+  msg = {_tag: "WithdrawStakeAmt"; _recipient: holder_addr; _amount: uint128_zero; ssnaddr: ssnaddr; amount: amount};
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure BufferConfirmDelegatorSwap(buffer_addr: ByStr20, requestor: ByStr20)
+  msg = { _tag: "ConfirmDelegatorSwap"; _recipient: buffer_addr; _amount: uint128_zero; requestor: requestor };
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure BufferRejectDelegatorSwap(buffer_addr: ByStr20, requestor: ByStr20)
+  msg = { _tag: "RejectDelegatorSwap"; _recipient: buffer_addr; _amount: uint128_zero; requestor: requestor };
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure HolderCompleteWithdrawal()
+  holder_addr <- holder_address;
+  msg = { _tag: "CompleteWithdrawal"; _recipient: holder_addr; _amount: uint128_zero };
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure BufferReDelegate(buffer_addr: ByStr20, ssnaddr: ByStr20, to_ssn: ByStr20, amount: Uint128)
+  msg = { _tag: "ReDelegateStake"; _recipient: buffer_addr; _amount: uint128_zero; ssnaddr: ssnaddr; to_ssn: to_ssn; amount: amount };
+  msgs = one_msg msg;
+  send msgs
+end
+
+(* @dev : To delegate the stake to the contract through buffer. *)
+procedure BufferDelegate(amount: Uint128)
+  FetchRemoteZimplFields;
+  cycle <- local_lastrewardcycle;
+  buffer_addrs <- buffers_addresses;
+  buffer_addr = get_active_buffer_addr buffer_addrs cycle;
+
+  GetSsnAddressForInput;
+  ssnaddr <- tmp_ssn_addr_in;
+
+  msg = {_tag: "DelegateStake"; _recipient: buffer_addr; _amount: amount; ssnaddr: ssnaddr};
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure ClaimRewardsProc(deleg: ByStr20, ssnaddr: ByStr20)
+  RequireZimplDelegSsnExists deleg ssnaddr;
+  msg = { _tag: "ClaimRewards"; _recipient: deleg; _amount: uint128_zero; ssnaddr: ssnaddr };
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure RequestDelegatorSwap(from: ByStr20, to: ByStr20)
+  msg = { _tag: "RequestDelegatorSwap"; _recipient: from; _amount: uint128_zero; new_deleg_addr: to};
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure ConfirmDelegatorSwap(from: ByStr20, to: ByStr20)
+  msg = { _tag: "ConfirmDelegatorSwap"; _recipient: to; _amount: uint128_zero; requestor: from};
+  msgs = one_msg msg;
+  send msgs
+end
+
+(************************************************************)
+(* @dev: stZIL actions                                       *)
+(************************************************************)
+
+procedure IsDelegStakeSufficient(amount: Uint128)
+  mindelegstake_l <- mindelegstake;
+  suffi =  uint128_le mindelegstake_l amount;
+  match suffi with
+  | True =>
+  | False =>
+    e = DelegStakeNotEnough;
+    ThrowError e
+  end
+end
+
+procedure IncreaseTotalStakeAmt(amt: Uint128)
+  total_stake_amt <- totalstakeamount;
+  new_total_amt = builtin add total_stake_amt amt;
+  totalstakeamount := new_total_amt
+end
+
+procedure IncreaseTotalSupplyAmt(amt: Uint128)
+  total_supply_amt <- total_supply;
+  new_total_amt = builtin add total_supply_amt amt;
+  total_supply := new_total_amt
+end
+
+procedure IncreaseAutoRestakeAmt(amt: Uint128)
+  auto_restake_amt <- autorestakeamount;
+  new_total_amt = builtin add auto_restake_amt amt;
+  autorestakeamount := new_total_amt
+end
+
+procedure DecreaseTotalStakeAmt(amt: Uint128)
+  current_amt <- totalstakeamount;
+  valid = uint128_le amt current_amt;
+  match valid with
+  | True =>
+    new_amt = builtin sub current_amt amt;
+    totalstakeamount := new_amt
+  | False =>
+    e = InvalidTotalAmt;
+    ThrowError e
+  end
+end
+
+procedure DecreaseTotalSupplyAmt(amt: Uint128)
+  current_amt <- total_supply;
+  valid = uint128_le amt current_amt;
+  match valid with
+  | True =>
+    new_amt = builtin sub current_amt amt;
+    total_supply := new_amt
+  | False =>
+    e = InvalidTotalAmt;
+    ThrowError e
+  end
+end
+
+procedure TruncateDeleg(deleg: ByStr20)
+  delete balances[deleg]
+end
+
+(* newTokens = amount * total_supply / totalstakeamount *)
+procedure UpdateTokenBalance(initiator: ByStr20, stake_amt: Uint128)
+  total_supply_amt <- total_supply;
+  current_stake_amt <- totalstakeamount;
+
+  first_delegation = builtin eq total_supply_amt uint128_zero;
+  token_amt =
+    match first_delegation with
+    | True => stake_amt
+    | False => muldiv stake_amt total_supply_amt current_stake_amt
+    end;
+
+  current_token_amount <- balances[initiator];
+  match current_token_amount  with
+  | Some current_token_amt =>
+    new_current_token_amt = builtin add current_token_amt token_amt;
+    balances[initiator] := new_current_token_amt
+  | None =>
+    balances[initiator] := token_amt
+  end;
+
+  IncreaseTotalStakeAmt stake_amt;
+  IncreaseTotalSupplyAmt token_amt;
+
+  (* emit mint event *)
+  e = { _eventname: "Minted"; minter: _this_address; recipient: initiator; amount: token_amt };
+  event e
+
+end
+
+procedure RequireValidWithdrawAmount(withdrawal_fee: Uint128, amount: Uint128)
+  is_fee_less_than_amount = builtin lt withdrawal_fee amount;
+
+  match is_fee_less_than_amount with
+  | True =>
+    (* Do Nothing *)
+  | False =>
+    e = WithdrawTokensAmtLessThanFee;
+    ThrowError e
+  end
+end
+
+procedure TakeWithdrawalFee(sender: ByStr20, withdrawal_fee: Uint128)
+  is_zero_fees = builtin eq withdrawal_fee uint128_zero;
+
+  match is_zero_fees with
+  | True =>
+    (* Do nothing *)
+  | False =>
+    var_withdrawal_fee_address <- withdrawal_fee_address;
+    o_current_balance <- balances[var_withdrawal_fee_address];
+    current_balance = option_uint128_value o_current_balance;
+    new_balance = builtin add current_balance withdrawal_fee;
+    balances[var_withdrawal_fee_address] := new_balance;
+
+    e = {_eventname : "TransferSuccess"; sender : sender; recipient : var_withdrawal_fee_address; amount : withdrawal_fee};
+    event e
+  end
+end
+
+procedure AdjustDeleg(deleg: ByStr20, total_amount: Uint128, withdraw_amount: Uint128)
+  sufficient = uint128_le withdraw_amount total_amount;
+  match sufficient with
+  | True =>
+    need_truncate =  builtin eq withdraw_amount total_amount;
+    match need_truncate with
+    | True =>
+      (* Remove all info map recorded for this deleg *)
+      TruncateDeleg deleg
+    | False =>
+      (* Readjust all rest deleg to this cycle *)
+      rest_deleg = builtin sub total_amount withdraw_amount;
+      (* rest delegate should also meet mindelegstake *)
+      IsDelegStakeSufficient rest_deleg;
+      TruncateDeleg deleg;
+      (* Refer to transition TruncateDeleg, here we don't use Fillin transition because we *)
+      (* know they are all empty, and this can reduce some gasfee *)
+      balances[deleg] := rest_deleg
+    end
+  | False =>
+    e = DelegHasNoSufficientAmt;
+    ThrowError e
+  end
+end
+
+procedure DoWithdrawal(initiator: ByStr20, from_ssn: ByStr20, withdraw_token_amt: Uint128, withdraw_stake_amt: Uint128)
+  current_token_amount <- balances[initiator];
+
+  match current_token_amount with
+  | Some current_token_amt =>
+    AdjustDeleg initiator current_token_amt withdraw_token_amt;
+
+    (* Illegal withdraw amount could be handled in procedure AdjustDeleg *)
+
+    withdrawal_bnum <- & BLOCKNUMBER;
+    withdraw_pending_o <- withdrawal_pending[withdrawal_bnum][initiator];
+
+    (* Upsert pending withdrawal *)
+    match withdraw_pending_o with
+    | Some (Withdrawal token stake) =>
+      new_withdraw_token_amt = builtin add token withdraw_token_amt;
+      new_withdraw_stake_amt = builtin add stake withdraw_stake_amt;
+      pending_withdrawal = Withdrawal new_withdraw_token_amt new_withdraw_stake_amt;
+      withdrawal_pending[withdrawal_bnum][initiator] := pending_withdrawal;
+      withdrawal_pending_of_delegator[initiator][withdrawal_bnum] := pending_withdrawal
+    | None =>
+      pending_withdrawal = Withdrawal withdraw_token_amt withdraw_stake_amt;
+      withdrawal_pending[withdrawal_bnum][initiator] := pending_withdrawal;
+      withdrawal_pending_of_delegator[initiator][withdrawal_bnum] := pending_withdrawal
+    end;
+
+    e = { _eventname: "WithdrawStakeAmt"; ssn_addr: from_ssn; deleg_address: initiator; withdraw_amount:withdraw_token_amt; withdraw_stake_amount:withdraw_stake_amt };
+    event e;
+
+    (* Subtract withdrawn amounts from total counters *)
+    DecreaseTotalStakeAmt withdraw_stake_amt;
+    DecreaseTotalSupplyAmt withdraw_token_amt;
+
+    (* emit burn event *)
+    e = { _eventname: "Burnt"; burner: _this_address; burn_account: initiator; amount: withdraw_token_amt };
+    event e;
+
+    (* call Holder contract *)
+    HolderWithdrawStakeAmt from_ssn withdraw_stake_amt
+  | None =>
+    e = DelegDoesNotExistAtSSN;
+    ThrowError e
+  end
+end
+
+(* We can receive two types of callback: *)
+(*   1. Autorestake. We need to increase internal total ZIL balance. *)
+(*   2. User delegate. We need to change a user balance  *)
+procedure ProcessDelegateStakeSuccessCallBack(delegator: ByStr20, amount: Uint128)
+  is_autorestake = builtin eq delegator _this_address;
+
+  match is_autorestake with
+  | True =>
+    IncreaseTotalStakeAmt amount;
+    autorestakeamount := uint128_zero
+  | False =>
+    UpdateTokenBalance delegator amount;
+
+    (* Reset tmp variables *)
+    tmp_stake_delegate_amount := uint128_zero;
+    reset_delegator = None {ByStr20};
+    tmp_delegator := reset_delegator;
+
+
+    msg_to_delegator = {_tag : "DelegateStakeSuccessCallBack"; _recipient : delegator; _amount : uint128_zero; amount : amount};
+    msg = one_msg msg_to_delegator;
+    send msg
+  end
+end
+
+(*
+  tmp_complete_withdrawal_available += Withdrawal.stake
+  withdrawal_unbonded[delegator] += Withdrawal; //create if none
+*)
+procedure CalculateTotalWithdrawalBlock(deleg_withdrawal: Pair ByStr20 Withdrawal)
+  match deleg_withdrawal with
+  | Pair delegator withdrawal =>
+    match withdrawal with
+    | Withdrawal withdraw_token_amt withdraw_stake_amt =>
+      (* update total stake withdraw amount *)
+      current_amt <- tmp_complete_withdrawal_available;
+      current_amt = builtin add current_amt withdraw_stake_amt;
+      tmp_complete_withdrawal_available := current_amt;
+      (* upsert unbonded withdrawal for delegator *)
+      withdrawal_unbonded_o <- withdrawal_unbonded[delegator];
+      match withdrawal_unbonded_o with
+      | Some (Withdrawal token stake) =>
+        updated_token = builtin add token withdraw_token_amt;
+        updated_stake = builtin add stake withdraw_stake_amt;
+        unbonded_withdrawal = Withdrawal updated_token updated_stake;
+        withdrawal_unbonded[delegator] := unbonded_withdrawal
+      | None =>
+        withdrawal_unbonded[delegator] := withdrawal
+      end
+    end
+  end
+end
+
+procedure CleanWithdrawalDeleg(deleg: ByStr20)
+  o_withdrawal_pending_of_delegator <- withdrawal_pending_of_delegator[deleg];
+  match o_withdrawal_pending_of_delegator with
+  | Some var_withdrawal_pending_of_delegator =>
+    map_size = builtin size var_withdrawal_pending_of_delegator;
+    is_map_empty = builtin eq map_size uint32_zero;
+    match is_map_empty with
+    | True => (* empty map *)
+      delete withdrawal_pending_of_delegator[deleg]
+    | False => (* contains other records *)
+    end
+  | None => (* nothing to delete *)
+  end
+end
+
+procedure DeleteWithdrawalDelegBnum(pair_deleg_bnum: Pair ByStr20 Withdrawal)
+  match pair_deleg_bnum with
+  | Pair deleg withdrawal =>
+    bnum <- tmp_bnum;
+    delete withdrawal_pending_of_delegator[deleg][bnum];
+    CleanWithdrawalDeleg deleg
+  end
+end
+
+(*
+  foreach withdrawal_pending[bnum] as Pair deleg Withdrawal
+  then delete withdrawal_pending[bnum]
+*)
+procedure CalculateTotalWithdrawal(bnum: BNum)
+  map_deleg_amount_o <- withdrawal_pending[bnum];
+  match map_deleg_amount_o with
+  | Some map_deleg_amount =>
+    list_deleg_amount = builtin to_list map_deleg_amount;
+    forall list_deleg_amount CalculateTotalWithdrawalBlock;
+    tmp_bnum := bnum;
+    forall list_deleg_amount DeleteWithdrawalDelegBnum
+  | None =>
+  end;
+  delete withdrawal_pending[bnum]
+end
+
+(************************************************************)
+(* @dev: Admin actions                                      *)
+(************************************************************)
+
+transition PauseIn()
+  RequireOwner;
+  RequireNotPausedIn;
+
+  is_paused_in := true;
+  e = { _eventname: "PauseIn"; is_paused_in: uint32_one };
+  event e
+end
+
+transition UnPauseIn()
+  RequireOwner;
+
+  paused <- is_paused_in;
+  match paused with
+  | True =>
+  | False =>
+    error = NotPausedIn;
+    ThrowError error
+  end;
+
+  var_buffers <- buffers_addresses;
+  RequireBuffers var_buffers;
+  var_ssn_addresses <- ssn_addresses;
+  RequireSsnAddresses var_ssn_addresses;
+
+  is_paused_in := false;
+  e = { _eventname: "UnPauseIn"; is_paused_in: uint32_zero };
+  event e
+end
+
+transition PauseOut()
+  RequireOwner;
+  RequireNotPausedOut;
+
+  is_paused_out := true;
+  e = { _eventname: "PauseOut"; is_paused_out: uint32_one };
+  event e
+end
+
+transition UnPauseOut()
+  RequireOwner;
+
+  paused <- is_paused_out;
+  match paused with
+  | True =>
+  | False =>
+    error = NotPausedOut;
+    ThrowError error
+  end;
+
+  is_paused_out := false;
+  e = { _eventname: "UnPauseOut"; is_paused_out: uint32_zero };
+  event e
+end
+
+transition PauseZrc2()
+  RequireOwner;
+  RequireNotPausedZrc2;
+
+  is_paused_zrc2 := true;
+  e = { _eventname: "PauseZrc2"; is_paused_zrc2: uint32_one };
+  event e
+end
+
+transition UnPauseZrc2()
+  RequireOwner;
+
+  paused <- is_paused_zrc2;
+  match paused with
+  | True =>
+  | False =>
+    error = NotPausedZrc2;
+    ThrowError error
+  end;
+
+  is_paused_zrc2 := false;
+  e = { _eventname: "UnPauseZrc2"; is_paused_zrc2: uint32_zero };
+  event e
+end
+
+transition ChangeAdmin(new_admin: ByStr20)
+  RequireOwner;
+  var_admin_address <- admin_address;
+  admin_address := new_admin;
+  e = {_eventname: "ChangeAdmin"; old_admin: var_admin_address; new_admin: new_admin};
+  event e
+end
+
+transition ChangeOwner(new_owner: ByStr20)
+  RequireOwner;
+  var_staging_owner = Some {ByStr20} new_owner;
+  staging_owner_address := var_staging_owner;
+  var_owner_address <- owner_address;
+  e = {_eventname: "ChangeOwner"; current_owner: var_owner_address; new_owner: new_owner};
+  event e
+end
+
+transition ClaimOwner()
+  staging_owner_o <- staging_owner_address;
+  match staging_owner_o with
+  | Some staging_owner =>
+    is_stagingowner = builtin eq staging_owner _sender;
+    match is_stagingowner with
+    | True =>
+      owner_address := _sender;
+      tmp_staging_owner = None {ByStr20};
+      staging_owner_address := tmp_staging_owner;
+      e = {_eventname: "ClaimOwner"; new_owner: _sender};
+      event e
+    | False =>
+      e = StagingOwnerValidationFailed;
+      ThrowError e
+    end
+  | None =>
+    e = StagingOwnerNotExists;
+    ThrowError e
+  end
+end
+
+transition ChangeTreasuryAddress(address: ByStr20)
+  RequireOwner;
+  treasury_address := address
+end
+
+
+transition ChangeWithdrawalFeeAddress(address: ByStr20)
+  RequireOwner;
+  withdrawal_fee_address := address
+end
+
+transition SetHolderAddress(address: ByStr20)
+  RequireOwner;
+  var_holder_addr <- holder_address;
+  is_holder_empty = builtin eq var_holder_addr bystr20_zero;
+  match is_holder_empty with
+  | True =>
+    holder_address := address;
+    e = { _eventname: "SetHolderAddress"; address: address };
+    event e
+  | False =>
+    e = HolderAlreadySet;
+    ThrowError e
+  end
+end
+
+transition ChangeZimplAddress(address: ByStr20)
+  RequireOwner;
+  zimpl_address := address;
+  e = { _eventname: "ChangeZimplAddress"; address: address };
+  event e
+end
+
+transition ChangeBuffers(new_buffers: List ByStr20)
+  RequireOwner;
+  RequireBuffers new_buffers;
+  buffers_addresses := new_buffers
+end
+
+transition AddSSN(ssnaddr: ByStr20)
+  RequireOwner;
+  var_ssn_addresses <- ssn_addresses;
+  is_whitelisted = is_addr_in_list var_ssn_addresses ssnaddr;
+  match is_whitelisted with
+  | True =>
+    e = SsnAddressExists;
+    ThrowError e
+  | False =>
+  end;
+  new_list = Cons {ByStr20} ssnaddr var_ssn_addresses;
+  ssn_addresses := new_list
+end
+
+transition RemoveSSN(ssnaddr: ByStr20)
+  RequireOwner;
+  var_ssn_addresses <- ssn_addresses;
+  is_whitelisted = is_addr_in_list var_ssn_addresses ssnaddr;
+  match is_whitelisted with
+  | True =>
+      new_list = remove_addr_from_list ssnaddr var_ssn_addresses;
+      var_is_paused_in <- is_paused_in;
+      match var_is_paused_in with
+      | True =>
+        (* in-operations are paused, it's safe to set ssn_addresses to empty list *)
+      | False =>
+        (* in-operations aren't paused, so ssn addresses list must not be empty *)
+        RequireSsnAddresses new_list
+      end;
+      ssn_addresses := new_list
+  | False =>
+    e = SsnAddressDoesNotExist;
+    ThrowError e
+  end
+end
+
+transition ClaimRewards(buffer_or_holder: ByStr20, ssn: ByStr20)
+  RequireAdmin;
+  RequireBufferOrHolder buffer_or_holder;
+  ClaimRewardsProc buffer_or_holder ssn
+end
+
+(* transfer stake from buffer to holder; should be called after claiming rewards from buffer/holder *)
+transition ConsolidateInHolder(buffer_addr: ByStr20)
+  RequireAdmin;
+  RequireBuffer buffer_addr;
+  (* RequireClaimedRewards? *)
+
+  FetchZimplDelegExists buffer_addr; (* we're sure that holder exists there *)
+  (* local_lastrewardcycle updated in FetchZimplDelegExists *)
+  lrc <- local_lastrewardcycle;
+  RequireNotDrainedBuffer buffer_addr lrc;
+  var_buffer_exists <- tmp_deleg_exists;
+  match var_buffer_exists with
+  | True =>
+    holder_addr <- holder_address;
+    RequestDelegatorSwap buffer_addr holder_addr;
+    ConfirmDelegatorSwap buffer_addr holder_addr;
+    tmp_deleg_exists := false
+  | False =>
+  end;
+  (* Buffer does not exist is a possible and correct case if no one staked ZIL in the current cycle. *)
+  (* We still should mark the buffer as drained at the cycle. *)
+  buffer_drained_cycle[buffer_addr] := lrc
+end
+
+transition ClaimRewardsSuccessCallBack()
+  RequireBufferOrHolder _sender;
+  accept;
+
+  (* take fee from rewards *)
+  var_rewards_fee <- rewards_fee;
+  var_treasury_addr <- treasury_address;
+  rewards_fee_value = muldiv var_rewards_fee _amount fee_denom;
+  TransferFunds addfunds_tag rewards_fee_value var_treasury_addr;
+  after_fee = builtin sub _amount rewards_fee_value;
+
+  IncreaseAutoRestakeAmt after_fee
+end
+
+(* offchain-tools calls this transition every new cycle *)
+transition PerformAutoRestake()
+  RequireAdmin;
+
+  auto_restake_amt <- autorestakeamount;
+  IsDelegStakeSufficient auto_restake_amt;
+
+  is_zero = builtin eq auto_restake_amt uint128_zero;
+  match is_zero with
+  | True =>
+  | False =>
+    tmp_stake_delegate_amount := auto_restake_amt;
+    o_delegator = Some {ByStr20} _this_address;
+    tmp_delegator := o_delegator;
+
+    BufferDelegate auto_restake_amt
+  end
+end
+
+transition IncreaseAutoRestakeAmount()
+  RequireAdmin;
+  accept;
+  amount = _amount;
+
+  IncreaseAutoRestakeAmt amount;
+
+  e = { _eventname: "IncreaseAutoRestakeAmount"; amount: amount };
+  event e
+end
+
+(* @dev: Set the staking parameters of contract. *)
+transition UpdateStakingParameters(new_mindelegstake: Uint128, new_rewards_fee: Uint128, new_withdrawal_fee: Uint128)
+  RequireOwner;
+
+  is_valid_fee = uint128_le new_rewards_fee fee_denom;
+  match is_valid_fee with
+  | False =>
+    e = InvalidRewardsFee;
+    ThrowError e
+  | True =>
+    rewards_fee := new_rewards_fee
+  end;
+
+  mindelegstake := new_mindelegstake;
+  withdrawal_fee := new_withdrawal_fee;
+
+  e = { _eventname: "UpdateStakingParameters"; mindelegstake: new_mindelegstake; rewards_fee: new_rewards_fee; withdrawal_fee: new_withdrawal_fee };
+  event e
+end
+
+(************************************************************)
+(* @dev: Deposit undelegated zil, use our node              *)
+(************************************************************)
+procedure DelegateStake_()
+  RequireNotPausedIn;
+
+  accept;
+  stake_amt = _amount;
+
+  IsDelegStakeSufficient stake_amt;
+
+  tmp_stake_delegate_amount := stake_amt;
+  o_delegator = Some {ByStr20} _sender;
+  tmp_delegator := o_delegator;
+
+  BufferDelegate stake_amt
+end
+
+transition DelegateStake()
+  DelegateStake_
+end
+
+transition DelegateStakeWithReferral(referral: ByStr20)
+  DelegateStake_;
+
+  e = { _eventname: "DelegateStakeWithReferral"; referral: referral; amount: _amount };
+  event e
+end
+
+transition DelegateStakeSuccessCallBack(amount: Uint128)
+  RequireBufferOrHolder _sender;
+
+  stake_delegate_amt <- tmp_stake_delegate_amount;
+  o_delegator <- tmp_delegator;
+
+  amount_eq = builtin eq amount stake_delegate_amt;
+
+  match amount_eq with
+  | False =>
+    e = DelegStakeFundsMismatch;
+    ThrowError e
+  | True =>
+    match o_delegator with
+    | Some delegator =>
+      ProcessDelegateStakeSuccessCallBack delegator amount;
+
+      e = { _eventname: "DelegateStake"; delegator: delegator; amount: amount };
+      event e
+    | None =>
+      e = DelegAddrUnknown;
+      ThrowError e
+    end
+  end
+end
+
+(********************************************************************************)
+(*                    ClaimWithdrawal Flow                                      *)
+(*                                                                              *)
+(* 1) Offchain worker calls stZIL->ClaimWithdrawal()                            *)
+(* 1) stZIL calls Holder->CompleteWithdrawal()                                  *)
+(* 2) Holder calls Zproxy->CompleteWithdrawal()                                 *)
+(* 3) Zimpl do its work, then few options are possible:                         *)
+(*   a) it issues NoPendingWithdrawal event                                     *)
+(*   b) it calls back Holder->CompleteWithdrawalNoUnbondedStakeCallBack()       *)
+(*   c) it calls subsequentally:                                                *)
+(*     * Holder->AddFunds(_amount), Holder should accept it                     *)
+(*     * Holder->CompleteWithdrawalSuccessCallBack(amount),                     *)
+(* In case of (3c):                                                             *)
+(*                                                                              *)
+(* 1) Holder calls stZIL->CompleteWithdrawalSuccessCallBack(_amount)            *)
+(* 2) stZIL accepts; then check _amount with tmp_complete_withdrawal_available  *)
+(*   a) OK => workflow finished                                                 *)
+(*   b) ERROR => exception                                                      *)
+(*                                                                              *)
+(* Completely successful chaincall will looks like                              *)
+(* Worker->stZIL->Holder->Zproxy->Zimpl->Holder->stZIL                          *)
+(*                                                                              *)
+(********************************************************************************)
+
+transition ClaimWithdrawal(blocks_to_withdraw: List BNum)
+  FetchRemoteZimplFields;
+
+  current_bnum <- & BLOCKNUMBER;
+  current_bnum_req <- local_bnum_req;
+  unbonded = leave_unbonded current_bnum current_bnum_req blocks_to_withdraw;
+
+  tmp_complete_withdrawal_available := uint128_zero;
+
+  forall unbonded CalculateTotalWithdrawal;
+
+  withdraw_stake_amt <- tmp_complete_withdrawal_available;
+  zero_withdraw = builtin eq withdraw_stake_amt uint128_zero;
+  match zero_withdraw with
+  | True =>
+    e = ClaimWithdrawalNoUnbonded;
+    ThrowError e
+  | False =>
+    (* there is something ready to withdraw completely, so we'll start the flow *)
+    HolderCompleteWithdrawal
+  end
+end
+
+(* @param amount: Amount of tokens to withdraw, ZIL stake amount to withdraw will be calculated basing on this parameter *)
+transition WithdrawTokensAmt(amount: Uint128)
+  RequireNotPausedOut;
+
+  (* Handle withdrawal fee *)
+  var_withdrawal_fee <- withdrawal_fee;
+  RequireValidWithdrawAmount var_withdrawal_fee amount;
+  TakeWithdrawalFee _sender var_withdrawal_fee;
+  withdraw_token_amt = builtin sub amount var_withdrawal_fee;
+
+  (* Calculate token to zil to withdraw *)
+  total_supply_amt <- total_supply;
+  total_stake_amt <- totalstakeamount;
+  withdraw_stake_amt = muldiv withdraw_token_amt total_stake_amt total_supply_amt;
+
+  GetSsnAddressForOutput withdraw_stake_amt;
+  ssnaddr <- tmp_ssn_addr_out;
+  (* first we do all checks, then call Holder on success within procedure *)
+  DoWithdrawal _sender ssnaddr withdraw_token_amt withdraw_stake_amt;
+
+  msg_to_delegator = {_tag : "WithdrawTokensAmtSuccessCallBack"; _recipient : _sender; _amount : uint128_zero;
+    ssnaddr : ssnaddr; amount : withdraw_token_amt};
+  msg = one_msg msg_to_delegator;
+  send msg
+end
+
+(* @param amount: Amount of ZIL to withdraw, stZIL stake amount to withdraw will be calculated basing on this parameter *)
+(* Needed as a slashing on the protocol level. Withdrawal fee does not apply *)
+transition SlashSSN(withdraw_stake_amt: Uint128, ssnaddr: ByStr20)
+  RequireAdmin;
+
+  (* Calculate zil to token to withdraw *)
+  total_supply_amt <- total_supply;
+  total_stake_amt <- totalstakeamount;
+  amount = muldiv withdraw_stake_amt total_supply_amt total_stake_amt;
+
+  (* first we do all checks, then call Holder on success within procedure *)
+  DoWithdrawal _sender ssnaddr amount withdraw_stake_amt;
+
+  msg_to_delegator = {_tag : "WithdrawTokensAmtSuccessCallBack"; _recipient : _sender; _amount : uint128_zero;
+    ssnaddr : ssnaddr; amount : amount};
+  msg = one_msg msg_to_delegator;
+  send msg
+end
+
+transition CompleteWithdrawal()
+  RequireNotPausedOut;
+
+  wu <- withdrawal_unbonded[_sender];
+  match wu with
+  | Some (Withdrawal wtoken wstake) =>
+    delete withdrawal_unbonded[_sender];
+    e = { _eventname: "CompleteWithdrawal"; delegator: _sender; amount: wstake };
+    event e;
+    TransferFunds addfunds_tag wstake _sender;
+    msg_to_delegator = {_tag : "CompleteWithdrawalSuccessCallBack"; _recipient : _sender; _amount : uint128_zero;
+      amount : wstake};
+    msg = one_msg msg_to_delegator;
+    send msg
+  | None =>
+    msg_to_delegator = {_tag : "CompleteWithdrawalNoUnbondedStakeCallBack"; _recipient : _sender; _amount : uint128_zero;
+    amount : uint128_zero};
+    msg = one_msg msg_to_delegator;
+    send msg;
+    e = { _eventname: "NoUnbondedStake" };
+    event e
+  end
+end
+
+transition CompleteWithdrawalSuccessCallBack()
+  RequireBufferOrHolder _sender;
+
+  accept;
+  amount = _amount;
+
+  (* check stZIL-calculated withdrawal amount against of Zimpl *)
+  withdraw_amt <- tmp_complete_withdrawal_available;
+  amount_eq = builtin eq withdraw_amt amount;
+  match amount_eq with
+  | False =>
+    e = { _eventname: "CompleteWithdrawalFundsMismatch"; amountStZil: withdraw_amt; amounthZimpl: amount };
+    event e;
+    e = CompleteWithdrawalFundsMismatch;
+    ThrowError e
+  | True =>
+  end;
+
+  tmp_complete_withdrawal_available := uint128_zero
+
+end
+
+(* confirms delegator's swap; could by called by anyone *)
+transition ChownStakeConfirmSwap(delegator: ByStr20)
+  RequireNotPausedIn;
+  var_zimpl_address <- zimpl_address;
+
+  o_zimpl_addr_test <- & var_zimpl_address as ByStr20 with contract
+    field deleg_swap_request: Map ByStr20 ByStr20,
+    field withdrawal_pending: Map ByStr20 (Map BNum Uint128),
+    field deposit_amt_deleg: Map ByStr20 (Map ByStr20 Uint128),
+    field lastrewardcycle: Uint32
+  end;
+
+  match o_zimpl_addr_test with
+  | Some zimpl =>
+
+    (* delegator must call RequestDelegatorSwap before *)
+    o_deleg_swap_request <- & zimpl.deleg_swap_request[delegator];
+    match o_deleg_swap_request with
+    | Some new_deleg =>
+
+      (* new_deleg must be stZIL buffer *)
+      var_buffers_addresses <- buffers_addresses;
+      is_buffer = is_addr_in_list var_buffers_addresses new_deleg;
+      match is_buffer with
+      | False =>
+        e = BufferAddrUnknown;
+        ThrowError e
+      | True => (* nop *)
+      end;
+
+      (* new_deleg must be next buffer *)
+      cycle <- & zimpl.lastrewardcycle;
+      next_cycle = builtin add cycle uint32_one;
+      next_buffer = get_active_buffer_addr var_buffers_addresses next_cycle;
+
+      (* new_deleg must be next buffer *)
+      is_next_buffer = builtin eq new_deleg next_buffer;
+      match is_next_buffer with
+      | False =>
+        (* we'll confirm swap requests only for next buffer, reject other *)
+        BufferRejectDelegatorSwap new_deleg delegator
+
+      | True =>
+
+        (* throw error if next buffer has not been drained still *)
+        (* we'll confirm swap later *)
+        RequireDrainedBuffer next_buffer cycle;
+
+        (* delegator must have no pending withdrawals *)
+        o_withdrawal <- & zimpl.withdrawal_pending[delegator];
+        match o_withdrawal with
+        | Some withdrawal =>
+          (* reject swap for delegator with pending withdrawals*)
+          BufferRejectDelegatorSwap new_deleg delegator
+
+        | None =>
+
+          (* sum delegator's stakes for each ssn, update token balance *)
+          o_deposit_amt_deleg <- & zimpl.deposit_amt_deleg[delegator];
+          match o_deposit_amt_deleg with
+          | Some map_ssn_amt =>
+            BufferConfirmDelegatorSwap new_deleg delegator;
+            total_redeleg_amt = sum_amount map_ssn_amt;
+            UpdateTokenBalance delegator total_redeleg_amt
+          | None =>
+            (* reject swap for delegator without deposits *)
+            BufferRejectDelegatorSwap new_deleg delegator
+          end
+
+        end
+      end
+
+    | None =>
+      e = ChownStakeSwapRequestNotFound;
+      ThrowError e
+    end
+
+  | None =>
+    e = ChownStakeCantFetchRemote;
+    ThrowError e
+  end
+end
+
+(* transfers funds from other ssn to active ssn *)
+transition ChownStakeReDelegate(from_ssn: ByStr20, amount: Uint128)
+  RequireAdmin;
+
+  var_ssn_addresses <- ssn_addresses;
+  is_whitelisted = is_addr_in_list var_ssn_addresses from_ssn;
+  match is_whitelisted with
+  | True =>
+    (* we won't redelegate amount from whitelisted address *)
+      e = { _eventname: "ChownStakeReDelegateSkip"; from_ssn: from_ssn; amount: amount };
+      event e
+  | False =>
+    GetSsnAddressForInput;
+    ssnaddr <- tmp_ssn_addr_in;
+
+    FetchRemoteZimplFields;
+
+    var_buffers_addresses <- buffers_addresses;
+    lrc <- local_lastrewardcycle;
+    active_buffer = get_active_buffer_addr var_buffers_addresses lrc;
+
+    (* ClaimRewardsProc may throw error in case of absence ssnlist.deposit_amt_deleg[active_buffer][from_ssn] entry *)
+    (* it's safe: ReDelegate procedure has no sense in that case; ssnlist will throw same DelegDoesNotExistAtSSN error *)
+    ClaimRewardsProc active_buffer from_ssn;
+    BufferReDelegate active_buffer from_ssn ssnaddr amount
+  end
+end
+
+(***************************************)
+(*      Fungible Token Transitions     *)
+(***************************************)
+
+procedure RequireNotSender(address: ByStr20)
+  is_sender = builtin eq _sender address;
+  match is_sender with
+  | True =>
+    err = CodeIsSender;
+    ThrowError err
+  | False =>
+  end
+end
+
+procedure AuthorizedMoveIfSufficientBalance(from: ByStr20, to: ByStr20, amount: Uint128)
+  o_from_bal <- balances[from];
+  bal = option_uint128_value o_from_bal;
+  can_do = uint128_le amount bal;
+  match can_do with
+  | True =>
+    (* Subtract amount from from and add it to to address *)
+    new_from_bal = builtin sub bal amount;
+    balances[from] := new_from_bal;
+    (* Adds amount to to address *)
+    get_to_bal <- balances[to];
+    new_to_bal = match get_to_bal with
+    | Some bal => builtin add bal amount
+    | None => amount
+    end;
+    balances[to] := new_to_bal
+  | False =>
+    (* Balance not sufficient *)
+    err = CodeInsufficientFunds;
+    ThrowError err
+  end
+end
+
+(* @dev: Increase the allowance of an approved_spender over the caller tokens. Only token_owner allowed to invoke.   *)
+(* param spender:      Address of the designated approved_spender.                                                   *)
+(* param amount:       Number of tokens to be increased as allowance for the approved_spender.                       *)
+transition IncreaseAllowance(spender: ByStr20, amount: Uint128)
+  RequireNotPausedZrc2;
+  RequireNotSender spender;
+  some_current_allowance <- allowances[_sender][spender];
+  current_allowance = option_uint128_value some_current_allowance;
+  new_allowance = builtin add current_allowance amount;
+  allowances[_sender][spender] := new_allowance;
+  e = {_eventname : "IncreasedAllowance"; token_owner : _sender; spender: spender; new_allowance : new_allowance};
+  event e
+end
+
+(* @dev: Decrease the allowance of an approved_spender over the caller tokens. Only token_owner allowed to invoke. *)
+(* param spender:      Address of the designated approved_spender.                                                 *)
+(* param amount:       Number of tokens to be decreased as allowance for the approved_spender.                     *)
+transition DecreaseAllowance(spender: ByStr20, amount: Uint128)
+  RequireNotPausedZrc2;
+  RequireNotSender spender;
+  some_current_allowance <- allowances[_sender][spender];
+  current_allowance = option_uint128_value some_current_allowance;
+  new_allowance =
+    let amount_le_allowance = uint128_le amount current_allowance in
+      match amount_le_allowance with
+      | True => builtin sub current_allowance amount
+      | False => uint128_zero
+      end;
+  allowances[_sender][spender] := new_allowance;
+  e = {_eventname : "DecreasedAllowance"; token_owner : _sender; spender: spender; new_allowance : new_allowance};
+  event e
+end
+
+(* @dev: Moves an amount tokens from _sender to the recipient. Used by token_owner. *)
+(* @dev: Balance of recipient will increase. Balance of _sender will decrease.      *)
+(* @param to:  Address of the recipient whose balance is increased.                 *)
+(* @param amount:     Amount of tokens to be sent.                                  *)
+transition Transfer(to: ByStr20, amount: Uint128)
+  RequireNotPausedZrc2;
+  AuthorizedMoveIfSufficientBalance _sender to amount;
+  e = {_eventname : "TransferSuccess"; sender : _sender; recipient : to; amount : amount};
+  event e;
+  (* Prevent sending to a contract address that does not support transfers of token *)
+  msg_to_recipient = {_tag : "RecipientAcceptTransfer"; _recipient : to; _amount : uint128_zero;
+                      sender : _sender; recipient : to; amount : amount};
+  msg_to_sender = {_tag : "TransferSuccessCallBack"; _recipient : _sender; _amount : uint128_zero;
+                  sender : _sender; recipient : to; amount : amount};
+  msgs = two_msgs msg_to_recipient msg_to_sender;
+  send msgs
+end
+
+(* @dev: Move a given amount of tokens from one address to another using the allowance mechanism. The caller must be an approved_spender. *)
+(* @dev: Balance of recipient will increase. Balance of token_owner will decrease.                                                        *)
+(* @param from:    Address of the token_owner whose balance is decreased.                                                                 *)
+(* @param to:      Address of the recipient whose balance is increased.                                                                   *)
+(* @param amount:  Amount of tokens to be transferred.                                                                                    *)
+transition TransferFrom(from: ByStr20, to: ByStr20, amount: Uint128)
+  RequireNotPausedZrc2;
+  o_spender_allowed <- allowances[from][_sender];
+  allowed = option_uint128_value o_spender_allowed;
+  can_do = uint128_le amount allowed;
+  match can_do with
+  | True =>
+    AuthorizedMoveIfSufficientBalance from to amount;
+    e = {_eventname : "TransferFromSuccess"; initiator : _sender; sender : from; recipient : to; amount : amount};
+    event e;
+    new_allowed = builtin sub allowed amount;
+    allowances[from][_sender] := new_allowed;
+    (* Prevent sending to a contract address that does not support transfers of token *)
+    msg_to_recipient = {_tag: "RecipientAcceptTransferFrom"; _recipient : to; _amount: uint128_zero;
+                        initiator: _sender; sender : from; recipient: to; amount: amount};
+    msg_to_sender = {_tag: "TransferFromSuccessCallBack"; _recipient: _sender; _amount: uint128_zero;
+                    initiator: _sender; sender: from; recipient: to; amount: amount};
+    msgs = two_msgs msg_to_recipient msg_to_sender;
+    send msgs
+  | False =>
+    err = CodeInsufficientAllowance;
+    ThrowError err
+  end
+end

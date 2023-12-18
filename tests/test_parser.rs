@@ -1,7 +1,20 @@
 use pretty_assertions::assert_eq;
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 use scilla_parser::{parse, Contract, Field, FieldList, Transition, Type};
+
+#[test]
+fn test_parse() -> Result<(), Box<dyn Error>> {
+    for entry in std::fs::read_dir("tests/contracts")? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            println!("Parsing {}", path.display());
+            parse(&path).expect("Failed to parse contract");
+        }
+    }
+    Ok(())
+}
 
 #[test]
 fn test_chain_id_contract_parse() {
@@ -497,4 +510,244 @@ fn test_staking_proxy_v2_parse() {
             ]
         }
     );
+}
+
+#[test]
+fn test_stzil_contract_parse() {
+    let contract_path = PathBuf::from("tests/contracts/stzil.scilla");
+    let contract = parse(&contract_path).unwrap();
+
+    assert_eq!(
+        contract,
+        Contract {
+            path: contract_path.canonicalize().unwrap(),
+            name: "StZIL".to_string(),
+            init_params: FieldList(vec![
+                Field::new("contract_owner", Type::ByStr(20)),
+                Field::new("init_admin_address", Type::ByStr(20)),
+                Field::new("init_zimpl_address", Type::ByStr(20)),
+                Field::new("name", Type::String),
+                Field::new("symbol", Type::String),
+                Field::new("decimals", Type::Uint32),
+                Field::new("init_supply", Type::Uint128)
+            ]),
+            fields: FieldList(vec![
+                Field::new("owner_address", Type::ByStr(20)),
+                Field::new("admin_address", Type::ByStr(20)),
+                Field::new("treasury_address", Type::ByStr(20)),
+                Field::new("withdrawal_fee_address", Type::ByStr(20)),
+                Field::new("zimpl_address", Type::ByStr(20)),
+                Field::new("holder_address", Type::ByStr(20)),
+                Field::new("buffers_addresses", Type::List(Box::new(Type::ByStr(20)))),
+                Field::new("ssn_addresses", Type::List(Box::new(Type::ByStr(20)))),
+                Field::new(
+                    "staging_owner_address",
+                    Type::Option(Box::new(Type::ByStr(20)))
+                ),
+                Field::new("is_paused_in", Type::Bool),
+                Field::new("is_paused_out", Type::Bool),
+                Field::new("is_paused_zrc2", Type::Bool),
+                Field::new("mindelegstake", Type::Uint128),
+                Field::new("withdrawal_fee", Type::Uint128),
+                Field::new("rewards_fee", Type::Uint128),
+                Field::new("totalstakeamount", Type::Uint128),
+                Field::new("autorestakeamount", Type::Uint128),
+                Field::new("total_supply", Type::Uint128),
+                Field::new(
+                    "balances",
+                    Type::Map(Box::new(Type::ByStr(20)), Box::new(Type::Uint128))
+                ),
+                Field::new(
+                    "allowances",
+                    Type::Map(
+                        Box::new(Type::ByStr(20)),
+                        Box::new(Type::Map(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::Uint128)
+                        ))
+                    )
+                ),
+                Field::new(
+                    "withdrawal_pending",
+                    Type::Map(
+                        Box::new(Type::BNum),
+                        Box::new(Type::Map(
+                            Box::new(Type::ByStr(20)),
+                            Box::new(Type::Other("Withdrawal".to_string()))
+                        ))
+                    )
+                ),
+                Field::new(
+                    "withdrawal_pending_of_delegator",
+                    Type::Map(
+                        Box::new(Type::ByStr(20)),
+                        Box::new(Type::Map(
+                            Box::new(Type::BNum),
+                            Box::new(Type::Other("Withdrawal".to_string()))
+                        ))
+                    )
+                ),
+                Field::new(
+                    "withdrawal_unbonded",
+                    Type::Map(
+                        Box::new(Type::ByStr(20)),
+                        Box::new(Type::Other("Withdrawal".to_string()))
+                    )
+                ),
+                Field::new(
+                    "buffer_drained_cycle",
+                    Type::Map(Box::new(Type::ByStr(20)), Box::new(Type::Uint32))
+                ),
+                Field::new("ssn_index", Type::Uint128),
+                Field::new("tmp_delegator", Type::Option(Box::new(Type::ByStr(20)))),
+                Field::new("tmp_stake_delegate_amount", Type::Uint128),
+                Field::new("tmp_complete_withdrawal_available", Type::Uint128),
+                Field::new("tmp_ssn_addr_in", Type::ByStr(20)),
+                Field::new("tmp_ssn_addr_out", Type::ByStr(20)),
+                Field::new("tmp_bnum", Type::BNum),
+                Field::new("tmp_deleg_exists", Type::Bool),
+                Field::new("local_bnum_req", Type::Uint128),
+                Field::new("local_lastrewardcycle", Type::Uint32),
+            ],),
+            transitions: vec![
+                Transition::new("PauseIn", FieldList::default()),
+                Transition::new("UnPauseIn", FieldList::default()),
+                Transition::new("PauseOut", FieldList::default()),
+                Transition::new("UnPauseOut", FieldList::default()),
+                Transition::new("PauseZrc2", FieldList::default()),
+                Transition::new("UnPauseZrc2", FieldList::default()),
+                Transition::new(
+                    "ChangeAdmin",
+                    FieldList(vec![Field::new("new_admin", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeOwner",
+                    FieldList(vec![Field::new("new_owner", Type::ByStr(20))])
+                ),
+                Transition::new("ClaimOwner", FieldList::default()),
+                Transition::new(
+                    "ChangeTreasuryAddress",
+                    FieldList(vec![Field::new("address", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ChangeWithdrawalFeeAddress",
+                    FieldList(vec![Field::new("address", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "SetHolderAddress",
+                    FieldList(vec![Field::new("address", Type::ByStr(20))]),
+                ),
+                Transition::new(
+                    "ChangeZimplAddress",
+                    FieldList(vec![Field::new("address", Type::ByStr(20))]),
+                ),
+                Transition::new(
+                    "ChangeBuffers",
+                    FieldList(vec![Field::new(
+                        "new_buffers",
+                        Type::List(Box::new(Type::ByStr(20)))
+                    )])
+                ),
+                Transition::new(
+                    "AddSSN",
+                    FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "RemoveSSN",
+                    FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
+                ),
+                Transition::new(
+                    "ClaimRewards",
+                    FieldList(vec![
+                        Field::new("buffer_or_holder", Type::ByStr(20)),
+                        Field::new("ssn", Type::ByStr(20))
+                    ])
+                ),
+                Transition::new(
+                    "ConsolidateInHolder",
+                    FieldList(vec![Field::new("buffer_addr", Type::ByStr(20))])
+                ),
+                Transition::new("ClaimRewardsSuccessCallBack", FieldList::default()),
+                Transition::new("PerformAutoRestake", FieldList::default()),
+                Transition::new("IncreaseAutoRestakeAmount", FieldList::default()),
+                Transition::new(
+                    "UpdateStakingParameters",
+                    FieldList(vec![
+                        Field::new("new_mindelegstake", Type::Uint128),
+                        Field::new("new_rewards_fee", Type::Uint128),
+                        Field::new("new_withdrawal_fee", Type::Uint128),
+                    ],)
+                ),
+                Transition::new("DelegateStake", FieldList::default()),
+                Transition::new(
+                    "DelegateStakeWithReferral",
+                    FieldList(vec![Field::new("referral", Type::ByStr(20)),],)
+                ),
+                Transition::new(
+                    "DelegateStakeSuccessCallBack",
+                    FieldList(vec![Field::new("amount", Type::Uint128,),])
+                ),
+                Transition::new(
+                    "ClaimWithdrawal",
+                    FieldList(vec![Field::new(
+                        "blocks_to_withdraw",
+                        Type::List(Box::new(Type::BNum))
+                    )],)
+                ),
+                Transition::new(
+                    "WithdrawTokensAmt",
+                    FieldList(vec![Field::new("amount", Type::Uint128)],)
+                ),
+                Transition::new(
+                    "SlashSSN",
+                    FieldList(vec![
+                        Field::new("withdraw_stake_amt", Type::Uint128),
+                        Field::new("ssnaddr", Type::ByStr(20))
+                    ],)
+                ),
+                Transition::new("CompleteWithdrawal", FieldList::default()),
+                Transition::new("CompleteWithdrawalSuccessCallBack", FieldList::default()),
+                Transition::new(
+                    "ChownStakeConfirmSwap",
+                    FieldList(vec![Field::new("delegator", Type::ByStr(20)),],)
+                ),
+                Transition::new(
+                    "ChownStakeReDelegate",
+                    FieldList(vec![
+                        Field::new("from_ssn", Type::ByStr(20)),
+                        Field::new("amount", Type::Uint128),
+                    ],)
+                ),
+                Transition::new(
+                    "IncreaseAllowance",
+                    FieldList(vec![
+                        Field::new("spender", Type::ByStr(20)),
+                        Field::new("amount", Type::Uint128),
+                    ],)
+                ),
+                Transition::new(
+                    "DecreaseAllowance",
+                    FieldList(vec![
+                        Field::new("spender", Type::ByStr(20)),
+                        Field::new("amount", Type::Uint128),
+                    ],)
+                ),
+                Transition::new(
+                    "Transfer",
+                    FieldList(vec![
+                        Field::new("to", Type::ByStr(20)),
+                        Field::new("amount", Type::Uint128,),
+                    ],)
+                ),
+                Transition::new(
+                    "TransferFrom",
+                    FieldList(vec![
+                        Field::new("from", Type::ByStr(20)),
+                        Field::new("to", Type::ByStr(20)),
+                        Field::new("amount", Type::Uint128)
+                    ],)
+                ),
+            ],
+        }
+    )
 }

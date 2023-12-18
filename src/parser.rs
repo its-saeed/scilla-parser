@@ -6,6 +6,7 @@ use crate::{run_scilla_fmt, Contract, Error, Field, FieldList, Transition};
 
 pub fn parse(contract_path: &Path) -> Result<Contract, Error> {
     let sexp = run_scilla_fmt(contract_path).unwrap();
+    let sexp = sexp.replace("\\0", "");
     parse_sexp(&sexp, contract_path)
 }
 
