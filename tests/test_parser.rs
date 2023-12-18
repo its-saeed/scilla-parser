@@ -1,7 +1,7 @@
 use pretty_assertions::assert_eq;
 use std::{error::Error, path::PathBuf};
 
-use scilla_parser::{parse, Contract, Field, FieldList, Transition, Type};
+use scilla_parser::{Contract, Field, FieldList, Transition, TransitionList, Type};
 
 #[test]
 fn test_parse() -> Result<(), Box<dyn Error>> {
@@ -10,7 +10,7 @@ fn test_parse() -> Result<(), Box<dyn Error>> {
         let path = entry.path();
         if path.is_file() {
             println!("Parsing {}", path.display());
-            parse(&path).expect("Failed to parse contract");
+            Contract::from_path(&path)?;
         }
     }
     Ok(())
@@ -19,16 +19,18 @@ fn test_parse() -> Result<(), Box<dyn Error>> {
 #[test]
 fn test_chain_id_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/chainid.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
     assert_eq!(
         contract,
         Contract {
             name: "ChainId".to_string(),
-            path: contract_path.canonicalize().unwrap(),
-            fields: FieldList(vec![]),
-            init_params: FieldList(vec![]),
-            transitions: vec![Transition::new("EventChainID", FieldList::default())]
+            fields: FieldList::default(),
+            init_params: FieldList::default(),
+            transitions: TransitionList(vec![Transition::new(
+                "EventChainID",
+                FieldList::default()
+            )])
         }
     );
 }
@@ -36,20 +38,18 @@ fn test_chain_id_contract_parse() {
 #[test]
 fn test_hello_world_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/HelloWorld.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
-    assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(
         contract,
         Contract {
             name: "HelloWorld".to_string(),
-            path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![Field::new("owner", Type::ByStr(20))]),
             fields: FieldList(vec![Field::new("welcome_msg", Type::String)]),
-            transitions: vec![
+            transitions: TransitionList(vec![
                 Transition::new("setHello", FieldList(vec![Field::new("msg", Type::String)])),
                 Transition::new_without_param("getHello")
-            ]
+            ])
         }
     );
 }
@@ -57,14 +57,12 @@ fn test_hello_world_contract_parse() {
 #[test]
 fn test_send_zil_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/SendZil.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
-    assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(
         contract,
         Contract {
             name: "SendZil".to_string(),
-            path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![]),
             fields: FieldList(vec![
                 Field::new("test_field", Type::Uint256),
@@ -77,7 +75,7 @@ fn test_send_zil_contract_parse() {
                 ),
                 Field::new("list", Type::List(Box::new(Type::Int32))),
             ]),
-            transitions: vec![
+            transitions: TransitionList(vec![
                 Transition::new_without_param("acceptZil"),
                 Transition::new(
                     "updateTestField",
@@ -113,7 +111,7 @@ fn test_send_zil_contract_parse() {
                         Field::new("value", Type::Uint256)
                     ])
                 ),
-            ]
+            ])
         }
     );
 }
@@ -121,20 +119,18 @@ fn test_send_zil_contract_parse() {
 #[test]
 fn test_timestamp_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/Timestamp.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
-    assert_eq!(contract.path, contract_path.canonicalize().unwrap());
     assert_eq!(
         contract,
         Contract {
             name: "Timestamp".to_string(),
-            path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![]),
             fields: FieldList(vec![]),
-            transitions: vec![Transition::new(
+            transitions: TransitionList(vec![Transition::new(
                 "EventTimestamp",
                 FieldList(vec![Field::new("bnum", Type::BNum)])
-            ),]
+            )])
         }
     );
 }
@@ -142,12 +138,11 @@ fn test_timestamp_contract_parse() {
 #[test]
 fn test_fungible_token_parse() {
     let contract_path = PathBuf::from("tests/contracts/FungibleToken.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
     assert_eq!(
         contract,
         Contract {
             name: "FungibleToken".to_string(),
-            path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![
                 Field::new("contract_owner", Type::ByStr(20)),
                 Field::new("name", Type::String),
@@ -172,7 +167,7 @@ fn test_fungible_token_parse() {
                     )
                 )
             ]),
-            transitions: vec![
+            transitions: TransitionList(vec![
                 Transition::new(
                     "IncreaseAllowance",
                     FieldList(vec![
@@ -209,7 +204,7 @@ fn test_fungible_token_parse() {
                         Field::new("amount", Type::Uint128)
                     ])
                 ),
-            ]
+            ])
         }
     );
 }
@@ -217,12 +212,11 @@ fn test_fungible_token_parse() {
 #[test]
 fn test_staking_proxy_v2_parse() {
     let contract_path = PathBuf::from("tests/contracts/staking_proxy_v2.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
     assert_eq!(
         contract,
         Contract {
             name: "SSNListProxy_V2".to_string(),
-            path: contract_path.canonicalize().unwrap(),
             init_params: FieldList(vec![
                 Field::new("init_implementation", Type::ByStr(20)),
                 Field::new("init_admin", Type::ByStr(20)),
@@ -232,7 +226,7 @@ fn test_staking_proxy_v2_parse() {
                 Field::new("admin", Type::ByStr(20)),
                 Field::new("stagingadmin", Type::Option(Box::new(Type::ByStr(20)))),
             ]),
-            transitions: vec![
+            transitions: TransitionList(vec![
                 Transition::new(
                     "UpgradeTo",
                     FieldList(vec![Field::new("newImplementation", Type::ByStr(20))])
@@ -507,7 +501,7 @@ fn test_staking_proxy_v2_parse() {
                     "ChangeTotalStakeAmount",
                     FieldList(vec![Field::new("input_totalstakeamount", Type::Uint128)])
                 ),
-            ]
+            ])
         }
     );
 }
@@ -515,12 +509,11 @@ fn test_staking_proxy_v2_parse() {
 #[test]
 fn test_stzil_contract_parse() {
     let contract_path = PathBuf::from("tests/contracts/stzil.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
     assert_eq!(
         contract,
         Contract {
-            path: contract_path.canonicalize().unwrap(),
             name: "StZIL".to_string(),
             init_params: FieldList(vec![
                 Field::new("contract_owner", Type::ByStr(20)),
@@ -609,7 +602,7 @@ fn test_stzil_contract_parse() {
                 Field::new("local_bnum_req", Type::Uint128),
                 Field::new("local_lastrewardcycle", Type::Uint32),
             ],),
-            transitions: vec![
+            transitions: TransitionList(vec![
                 Transition::new("PauseIn", FieldList::default()),
                 Transition::new("UnPauseIn", FieldList::default()),
                 Transition::new("PauseOut", FieldList::default()),
@@ -747,7 +740,7 @@ fn test_stzil_contract_parse() {
                         Field::new("amount", Type::Uint128)
                     ],)
                 ),
-            ],
+            ])
         }
     )
 }

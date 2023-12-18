@@ -47,3 +47,21 @@ impl std::ops::Deref for FieldList {
         &self.0
     }
 }
+
+impl TryFrom<&Value> for FieldList {
+    type Error = Error;
+
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        if !value.is_list() {
+            return Ok(FieldList::default());
+        }
+
+        let fields: Result<Vec<Field>, Error> = value
+            .list_iter()
+            .unwrap()
+            .map(|elem| elem.try_into())
+            .collect();
+
+        Ok(FieldList(fields?))
+    }
+}

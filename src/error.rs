@@ -7,6 +7,9 @@ pub enum Error {
     #[error("The requested entry {0} does not exist in the given S-expression")]
     NoSuchEntryInSexp(String),
 
+    #[error("Comptype is not transition. It's {0}")]
+    CompTypeIsNotTransition(String),
+
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 
