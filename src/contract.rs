@@ -14,7 +14,8 @@ impl FromStr for Contract {
     type Err = Error;
 
     fn from_str(sexp: &str) -> Result<Self, Self::Err> {
-        let v = lexpr::from_str(sexp)?;
+        // Bug in lexpr crate requires escaping backslashes
+        let v = lexpr::from_str(&sexp.replace("\\", ""))?;
         let name = v["contr"][0]["cname"]["Ident"][0][1].to_string();
         let transitions = (&v["contr"][0]["ccomps"][0]).try_into()?;
         let init_params = (&v["contr"][0]["cparams"][0]).try_into()?;
@@ -30,6 +31,6 @@ impl FromStr for Contract {
 
 impl Contract {
     pub fn from_path(contract_path: &Path) -> Result<Self, Error> {
-        run_scilla_fmt(contract_path)?.replace("\\0", "").parse()
+        run_scilla_fmt(contract_path)?.parse()
     }
 }
