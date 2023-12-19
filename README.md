@@ -5,8 +5,9 @@ This repository contains a Rust parser for the Scilla smart contract language. [
 Add the following to your Cargo.toml:
 ```toml
 [dependencies]
-scilla_parser = "0.4.0"
+scilla_parser = "0.6.0"
 ```
+
 Alternatively, You can run this command:
 ```shell
 cargo add scilla_parser
@@ -16,20 +17,30 @@ This will add the scilla_parser dependency to Cargo.toml as specified in the ins
 # Usage
 To parse a Scilla file:
 ```rust
-    use scilla_parser::{parse, Contract, Field, FieldList, Transition};
+    use std::{error::Error, path::PathBuf};
+    use scilla_parser::{Contract, Field, FieldList, Transition, TransitionList, Type};
 
     let contract_path = PathBuf::from("tests/contracts/chainid.scilla");
-    let contract = parse(&contract_path).unwrap();
+    let contract = Contract::from_path(&contract_path).unwrap();
 
     assert_eq!(
         contract,
         Contract {
             name: "ChainId".to_string(),
-            path: contract_path.canonicalize().unwrap(),
-            fields: FieldList(vec![]),
-            constructor_params: FieldList(vec![]),
-            transitions: vec![Transition::new("EventChainID", FieldList::default())]
+            fields: FieldList::default(),
+            init_params: FieldList::default(),
+            transitions: TransitionList(vec![Transition::new(
+                "EventChainID",
+                FieldList::default()
+            )])
         }
     );
 ```
+
+To parse a string containing a scilla contract:
+```rust
+    let scilla_code: &str = "scilla contract";
+    let contract: Contract = scilla_code.parse().unwrap();
+```
+
 For more example take a look at the [tests](./tests/test_parser.rs).
