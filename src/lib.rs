@@ -12,6 +12,7 @@ pub use transition::*;
 
 use std::{path::Path, process::Command};
 
+/// Run the scilla-fmt command using docker to generate a s-expression out of a given scilla contract.
 pub fn run_scilla_fmt(path: &Path) -> Result<String, Error> {
     //docker run --rm -v contract.scilla:/tmp/input.scilla  -i zilliqa/scilla:v0.13.3 /scilla/0/bin/scilla-fmt --sexp --human-readable -d /tmp/input.scilla
     let volume = &format!(

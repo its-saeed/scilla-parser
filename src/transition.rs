@@ -27,6 +27,7 @@ impl Transition {
 impl TryFrom<&Value> for Transition {
     type Error = Error;
 
+    /// Try to parse a lexpr::Value into a transition.
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         let comp_type = value["comp_type"][0].as_symbol().unwrap();
         if comp_type == "CompTrans" {
@@ -55,6 +56,7 @@ impl std::ops::Deref for TransitionList {
 impl TryFrom<&Value> for TransitionList {
     type Error = Error;
 
+    /// Try to parse a lexpr::Value into a list of transitions.
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         if !value.is_list() {
             return Ok(TransitionList::default());

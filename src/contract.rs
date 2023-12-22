@@ -4,15 +4,20 @@ use crate::{run_scilla_fmt, Error, FieldList, TransitionList};
 
 #[derive(Debug, PartialEq)]
 pub struct Contract {
+    /// Name of the parsed contract
     pub name: String,
+    /// List of parameters needed to deploy the contract.
     pub init_params: FieldList,
+    /// List of the contract's fields.
     pub fields: FieldList,
+    /// List of the contract's transitions.
     pub transitions: TransitionList,
 }
 
 impl FromStr for Contract {
     type Err = Error;
 
+    /// Parse a Contract from a string slice
     fn from_str(sexp: &str) -> Result<Self, Self::Err> {
         // Bug in lexpr crate requires escaping backslashes
         let v = lexpr::from_str(&sexp.replace("\\", ""))?;
@@ -30,6 +35,7 @@ impl FromStr for Contract {
 }
 
 impl Contract {
+    /// Parse a contract from a given path.
     pub fn from_path(contract_path: &Path) -> Result<Self, Error> {
         run_scilla_fmt(contract_path)?.parse()
     }
