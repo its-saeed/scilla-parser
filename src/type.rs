@@ -2,6 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use crate::Error;
 
+/// Represents all different scilla types.
 #[derive(Debug, PartialEq)]
 pub enum Type {
     Int32,
@@ -33,6 +34,7 @@ pub enum Type {
 impl FromStr for Type {
     type Err = Error;
 
+    /// Try to parse a string slice to a Type.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let v = lexpr::from_str(s)?;
         match v[0].as_symbol() {
