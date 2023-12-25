@@ -16,7 +16,7 @@ This will add the scilla_parser dependency to Cargo.toml as specified in the ins
 
 # Usage
 This library parses the s-expression of a contract. There are two options:
-1. Use `Contract::from_path` and pass a contract path. This function will automatically call `scilla-fmt` through docker to generate the s-expression needed to parsed the contract.
+1. Use `Contract::from_path` and pass a contract path. This function will automatically call `scilla-fmt` through docker to generate the s-expression needed to parse the contract.
 2. Parse a string (slice) to a contract. The string is supposed to have the s-expression of a contract.
 
 ## To parse a Scilla file:
