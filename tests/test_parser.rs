@@ -235,7 +235,7 @@ fn test_staking_proxy_v2_parse() {
                     "ChangeProxyAdmin",
                     FieldList(vec![Field::new("newAdmin", Type::ByStr(20))])
                 ),
-                Transition::new("ClaimProxyAdmin", FieldList::default()),
+                Transition::new_without_param("ClaimProxyAdmin"),
                 Transition::new(
                     "OptInSSNToConsensusPoolAdminOverride",
                     FieldList(vec![Field::new("ssnaddr", Type::ByStr(20))])
@@ -262,8 +262,8 @@ fn test_staking_proxy_v2_parse() {
                         Field::new("comm", Type::Uint128)
                     ])
                 ),
-                Transition::new("AddSSNToConsensusPool", FieldList::default()),
-                Transition::new("RemoveSSNFromConsensusPool", FieldList::default()),
+                Transition::new_without_param("AddSSNToConsensusPool"),
+                Transition::new_without_param("RemoveSSNFromConsensusPool"),
                 Transition::new(
                     "WithdrawStakeRewardsForCycles",
                     FieldList(vec![
@@ -603,12 +603,12 @@ fn test_stzil_contract_parse() {
                 Field::new("local_lastrewardcycle", Type::Uint32),
             ],),
             transitions: TransitionList(vec![
-                Transition::new("PauseIn", FieldList::default()),
-                Transition::new("UnPauseIn", FieldList::default()),
-                Transition::new("PauseOut", FieldList::default()),
-                Transition::new("UnPauseOut", FieldList::default()),
-                Transition::new("PauseZrc2", FieldList::default()),
-                Transition::new("UnPauseZrc2", FieldList::default()),
+                Transition::new_without_param("PauseIn"),
+                Transition::new_without_param("UnPauseIn"),
+                Transition::new_without_param("PauseOut"),
+                Transition::new_without_param("UnPauseOut"),
+                Transition::new_without_param("PauseZrc2"),
+                Transition::new_without_param("UnPauseZrc2"),
                 Transition::new(
                     "ChangeAdmin",
                     FieldList(vec![Field::new("new_admin", Type::ByStr(20))])
@@ -617,7 +617,7 @@ fn test_stzil_contract_parse() {
                     "ChangeOwner",
                     FieldList(vec![Field::new("new_owner", Type::ByStr(20))])
                 ),
-                Transition::new("ClaimOwner", FieldList::default()),
+                Transition::new_without_param("ClaimOwner"),
                 Transition::new(
                     "ChangeTreasuryAddress",
                     FieldList(vec![Field::new("address", Type::ByStr(20))])
@@ -660,9 +660,9 @@ fn test_stzil_contract_parse() {
                     "ConsolidateInHolder",
                     FieldList(vec![Field::new("buffer_addr", Type::ByStr(20))])
                 ),
-                Transition::new("ClaimRewardsSuccessCallBack", FieldList::default()),
-                Transition::new("PerformAutoRestake", FieldList::default()),
-                Transition::new("IncreaseAutoRestakeAmount", FieldList::default()),
+                Transition::new_without_param("ClaimRewardsSuccessCallBack"),
+                Transition::new_without_param("PerformAutoRestake"),
+                Transition::new_without_param("IncreaseAutoRestakeAmount"),
                 Transition::new(
                     "UpdateStakingParameters",
                     FieldList(vec![
@@ -671,7 +671,7 @@ fn test_stzil_contract_parse() {
                         Field::new("new_withdrawal_fee", Type::Uint128),
                     ],)
                 ),
-                Transition::new("DelegateStake", FieldList::default()),
+                Transition::new_without_param("DelegateStake"),
                 Transition::new(
                     "DelegateStakeWithReferral",
                     FieldList(vec![Field::new("referral", Type::ByStr(20)),],)
@@ -698,8 +698,8 @@ fn test_stzil_contract_parse() {
                         Field::new("ssnaddr", Type::ByStr(20))
                     ],)
                 ),
-                Transition::new("CompleteWithdrawal", FieldList::default()),
-                Transition::new("CompleteWithdrawalSuccessCallBack", FieldList::default()),
+                Transition::new_without_param("CompleteWithdrawal"),
+                Transition::new_without_param("CompleteWithdrawalSuccessCallBack"),
                 Transition::new(
                     "ChownStakeConfirmSwap",
                     FieldList(vec![Field::new("delegator", Type::ByStr(20)),],)

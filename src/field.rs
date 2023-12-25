@@ -18,6 +18,12 @@ impl Default for Field {
 }
 
 impl Field {
+    /// Creates a new instance of field.
+    ///
+    /// Arguments:
+    ///
+    /// * `name`: A string representing the name of the field.
+    /// * `r#type`: Type of the field.
     pub fn new(name: &str, r#type: Type) -> Self {
         Self {
             name: name.to_string(),
