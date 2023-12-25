@@ -3,6 +3,8 @@ use std::{path::Path, str::FromStr};
 use crate::{run_scilla_fmt, Error, FieldList, TransitionList};
 
 #[derive(Debug, PartialEq)]
+/// The `Contract` struct represents a parsed contract in Rust, including its name, initialization
+/// parameters, fields, and transitions.
 pub struct Contract {
     /// Name of the parsed contract
     pub name: String,
