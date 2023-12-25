@@ -63,7 +63,7 @@ fn test_send_zil_contract_parse() {
         contract,
         Contract {
             name: "SendZil".to_string(),
-            init_params: FieldList(vec![]),
+            init_params: FieldList::default(),
             fields: FieldList(vec![
                 Field::new("test_field", Type::Uint256),
                 Field::new("bool", Type::Bool),
@@ -125,8 +125,8 @@ fn test_timestamp_contract_parse() {
         contract,
         Contract {
             name: "Timestamp".to_string(),
-            init_params: FieldList(vec![]),
-            fields: FieldList(vec![]),
+            init_params: FieldList::default(),
+            fields: FieldList::default(),
             transitions: TransitionList(vec![Transition::new(
                 "EventTimestamp",
                 FieldList(vec![Field::new("bnum", Type::BNum)])

@@ -33,7 +33,7 @@ Here is the code to parse [SendZil.scilla](./tests/contracts/SendZil.scilla) con
         contract,
         Contract {
             name: "SendZil".to_string(),
-            init_params: FieldList(vec![]),
+            init_params: FieldList::default(),
             fields: FieldList(vec![
                 Field::new("test_field", Type::Uint256),
                 Field::new("bool", Type::Bool),
