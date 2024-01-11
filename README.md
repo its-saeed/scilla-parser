@@ -1,3 +1,5 @@
+**This project is moved to [rs-zilliqa-rs](https://github.com/Zilliqa/rs-scilla-parser)**
+
 # Scilla Parser
 This repository contains a Rust parser for the Scilla smart contract language. [Scilla](https://scilla-lang.org/) is the smart contract language used in the Zilliqa blockchain.
 
